@@ -191,6 +191,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
 <div class="grid-4">
 <?php while($item = mysqli_fetch_assoc($result)): ?>
+    <a href="detail.php?id=<?php echo $item['id']; ?>" style="text-decoration:none; color:inherit;">
     <div class="card">
 
         <div class="card-img">
@@ -245,6 +246,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
         </div>
 
     </div>
+    </a>
 <?php endwhile; ?>
 </div>
 </section>
@@ -258,6 +260,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
     <div class="grid-4 slider" id="slider-ban">
     <?php while($item = mysqli_fetch_assoc($result_ban)): ?>
+        <a href="detail.php?id=<?php echo $item['id']; ?>">
         <div class="card">
 
             <div class="card-img">
@@ -302,12 +305,14 @@ $result_thue = mysqli_query($conn, $sql_thue);
             </div>
 
         </div>
+        </a>
     <?php endwhile; ?>
     </div>
-
+    
     <button class="slider-btn right" onclick="scrollSlider('ban', 1)">❯</button>
 
 </div>
+    
 </section>
 
 <section class="khoi">
@@ -319,6 +324,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
     <div class="grid-4 slider" id="slider-thue">
     <?php while($item = mysqli_fetch_assoc($result_thue)): ?>
+        <a href="detail.php?id=<?php echo $item['id']; ?>">
         <div class="card">
 
             <div class="card-img">
@@ -363,6 +369,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
             </div>
 
         </div>
+        </a>
     <?php endwhile; ?>
     </div>
 
@@ -495,18 +502,17 @@ function switchToLogin() {
 
 function scrollSlider(type, direction) {
     const slider = document.getElementById("slider-" + type);
-
     const card = slider.querySelector(".card");
+
     if (!card) return;
 
     const gap = 20;
-    const cardWidth = card.offsetWidth + gap;
+    const scrollAmount = card.offsetWidth + gap;
 
     slider.scrollBy({
-        left: direction * cardWidth,
-        behavior: 'smooth'
+        left: direction * scrollAmount,
+        behavior: "smooth"
     });
-    
 }
 
 function toggleGioiThieu() {
