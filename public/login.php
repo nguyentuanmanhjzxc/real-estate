@@ -8,8 +8,8 @@
         $password = $_POST['password'];
 
         if(empty($input) || empty($password)){
-            $_SESSION['status'] = 'error';
-            $_SESSION['msg'] = 'Vui lòng nhập thông tin đầy đủ';
+            $_SESSION['login_status'] = 'error';
+            $_SESSION['login_msg'] = 'Vui lòng nhập thông tin đầy đủ';
             header("Location: index.php");
             exit();
         }
@@ -27,8 +27,8 @@
 
 
     if($result->num_rows == 0){
-        $_SESSION['status'] = 'error';
-        $_SESSION['msg'] = 'Tài khoản không tồn tại';
+       $_SESSION['login_status'] = 'error';
+    $_SESSION['login_msg'] = 'Tài khoản không tồn tại';
         header("Location: index.php");
         exit();
     }
