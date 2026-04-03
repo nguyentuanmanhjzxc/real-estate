@@ -1,6 +1,6 @@
 <?php
+session_start();
 include("../config/database.php");
-
 $ten_trang = "TheApartment";
 $nam_hien_tai = date("Y");
 
@@ -52,10 +52,12 @@ $result_related = mysqli_query($conn, $sql_related);
         <div class="login-left">
             <h2>Đăng nhập</h2>
             <p>Chào mừng bạn đến với <b><?php echo $ten_trang; ?></b></p><br>
-            <input type="text" placeholder="Email">
-            <input type="password" placeholder="Mật khẩu">
+            <form method="post" action="login.php">
+            <input type="text" name="email" placeholder="Email">
+            <input type="password" name="password" placeholder="Mật khẩu">
             <div class="forgot-text">Quên mật khẩu?</div>
-            <button class="btn-submit">Đăng nhập</button>
+            <button type="submit" class="btn-submit">Đăng nhập</button>
+            </form>
             <div class="divider">HOẶC</div>
             <button class="google-login-btn">
                 <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" width="18"> Tiếp tục với Google
@@ -79,10 +81,23 @@ $result_related = mysqli_query($conn, $sql_related);
         <li><a href="#">Dự án</a></li>
         <li><a href="#">Tin tức</a></li>
     </ul>
-    <div class="navbar-actions">
-        <button class="btn-dang-nhap" onclick="openLogin()">Đăng nhập</button>
+        <div class="navbar-actions">
+        <?php if(isset($_SESSION['user'])): ?>
+
+            <div class="user-box">
+                <span class="user-greeting">
+                    Xin chào, <b><?php echo htmlspecialchars($_SESSION['user']['name']); ?></b>
+                </span>
+
+                <a href="logout.php" class="btn-logout">Đăng xuất</a>
+            </div>
+
+        <?php else: ?>
+            <button class="btn-dang-nhap" onclick="openLogin()">Đăng nhập</button>
+        <?php endif; ?>
+
         <button class="btn-dang-tin">Đăng tin miễn phí</button>
-    </div>
+        </div>
 </nav>
 
 <!-- SEARCH BAR -->
@@ -97,7 +112,7 @@ $result_related = mysqli_query($conn, $sql_related);
 <div class="filter-bar">
     <select class="filter-select"><option>Loại</option><option>Mua bán</option><option>Cho thuê</option></select>
     <select class="filter-select"><option>Căn hộ chung cư</option><option>Căn hộ dịch vụ</option><option>Penthouse</option></select>
-    <select class="filter-select"><option>#Vũng Tàu</option><option>TP. HCM</option><option>Hà Nội</option></select>
+    <select class="filter-select"><option>Vũng Tàu</option><option>TP. HCM</option><option>Hà Nội</option></select>
     <select class="filter-select"><option>Diện Tích</option><option>Dưới 50m²</option><option>50–80m²</option><option>Trên 80m²</option></select>
     <select class="filter-select"><option>Môi giới chuyên nghiệp</option><option>Cá nhân</option></select>
 </div>
@@ -295,10 +310,10 @@ $result_related = mysqli_query($conn, $sql_related);
                     <div class="c-stars">⭐ 5.0 · 12 đánh giá</div>
                 </div>
             </div>
-            <button class="btn-cta primary" onclick="openLogin()">
-                📞 <?php echo htmlspecialchars($item['contact_phone'] ?? 'Xem số điện thoại'); ?>
+            <button class="btn-cta primary" onclick="return requireLogin()">
+            <?php echo htmlspecialchars($item['contact_phone'] ?? 'Xem số điện thoại'); ?>
             </button>
-            <button class="btn-cta ghost" onclick="openLogin()">✉️ Nhắn tin</button>
+            <button class="btn-cta ghost" onclick="return requireLogin()">✉️ Nhắn tin</button>
         </div>
 
         <!-- ĐÁNH GIÁ -->
@@ -326,8 +341,8 @@ $result_related = mysqli_query($conn, $sql_related);
         <div class="s-card">
             <div class="block-title" style="margin-bottom:4px">Bình luận</div>
             <div class="cmt-row">
-                <input type="text" placeholder="Bình luận..." onclick="openLogin()">
-                <button class="btn-send" onclick="openLogin()">
+                <input type="text" placeholder="Bình luận..." onclick="return requireLogin()">
+                <button class="btn-send" onclick="return requireLogin()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                     </svg>
@@ -410,6 +425,17 @@ document.addEventListener('keydown', e => {
 function openLogin() { document.getElementById('loginPopup').style.display = 'flex'; }
 function closeLogin() { document.getElementById('loginPopup').style.display = 'none'; }
 document.getElementById('loginPopup').addEventListener('click', function(e) { if (e.target === this) closeLogin(); });
+
+
+const isLoggedIn = <?php echo isset($_SESSION['user']) ? 'true' : 'false'; ?>;
+
+function requireLogin() {
+    if (!isLoggedIn) {
+        openLogin();
+        return false;
+    }
+    return true;
+}
 </script>
 </body>
 </html>

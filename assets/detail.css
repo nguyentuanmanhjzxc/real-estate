@@ -619,6 +619,63 @@
     font-size: 14px;
     color: #444;
 }
+.user-menu {
+    position: relative;
+    cursor: pointer;
+}
+
+.user-name {
+    background: #f3f4f6;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.user-name:hover {
+    background: #e5e7eb;
+}
+
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* box user */
+.user-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* text greeting */
+.user-greeting {
+    font-size: 14px;
+    color: #fff;
+}
+
+/* logout button nhỏ gọn */
+.btn-logout {
+    background: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.btn-logout:hover {
+    background: #fff;
+    color: #e11d48;
+}
+
+/* hover hiện dropdown */
+.user-menu:hover .dropdown {
+    display: block;
+}
 
 /* RESPONSIVE */
 @media (max-width: 960px) {

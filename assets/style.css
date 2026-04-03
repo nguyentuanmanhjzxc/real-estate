@@ -436,6 +436,22 @@ body {
     font-weight: 600;
     text-decoration: none;
   }
+  .alert {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.alert.success {
+    background: #e6ffed;
+    color: #0a7a33;
+}
+
+.alert.error {
+    background: #ffe6e6;
+    color: #c00;
+}
 
   .login-right {
     width: 50%;

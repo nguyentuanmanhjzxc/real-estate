@@ -1,5 +1,20 @@
 <?php
-include("../config/database.php");
+include(__DIR__ . "/../config/database.php");
+    session_start();
+
+    
+// REGISTER
+$register_status = $_SESSION['status'] ?? '';
+$register_msg = $_SESSION['msg'] ?? '';
+
+unset($_SESSION['status'], $_SESSION['msg']);
+
+// LOGIN
+$login_status = $_SESSION['login_status'] ?? '';
+$login_msg = $_SESSION['login_msg'] ?? '';
+
+unset($_SESSION['login_status'], $_SESSION['login_msg']);
+
 
 $nam_hien_tai = date("Y");
 // 1. Đổi tên thương hiệu tại đây
@@ -17,6 +32,9 @@ $sql = "SELECT post.*, images.image_url, projects.province, projects.district
         LIMIT 8";
 
 $result = mysqli_query($conn, $sql);
+if (!$result){
+    die("Query lỗi:". mysqli_errno($conn));
+}
 
 // Tin chuyển nhượng (BÁN)
 $sql_ban = "SELECT post.*, images.image_url, projects.province, projects.district
@@ -54,6 +72,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/style.css">
 </head>
+
 <body>
 
 <div class="login-popup" id="loginPopup">
@@ -64,14 +83,22 @@ $result_thue = mysqli_query($conn, $sql_thue);
             <h2>Đăng nhập</h2>
             <p>Chào mừng bạn đến với  <b><?php echo $ten_trang; ?></b></p>
             <br>
+            <form method="post" action="login.php">
+
+                <?php if (!empty($login_msg)): ?>
+                    <div class="alert error">
+                        <?php echo htmlspecialchars($login_msg); ?>
+                    </div>
+                <?php endif; ?>
             <div class="form-group">
-                <input type="text" placeholder="Email">
-                <input type="password" placeholder="Mật khẩu">
+                <input type="text" name="email" placeholder="Email" required>
+                <input type="password" name="password" placeholder="Mật khẩu" required>
             </div>
 
             <div class="forgot-text">Quên mật khẩu?</div>
             
-            <button class="btn-submit">Đăng nhập</button>
+            <button type="submit" class="btn-submit">Đăng nhập</button>
+            </form>
 
             <div class="divider">HOẶC</div>
 
@@ -114,27 +141,29 @@ $result_thue = mysqli_query($conn, $sql_thue);
         <div class="login-left">
 
             <h2>Đăng ký</h2>
-
+            <form method="post" action="register.php">
+                    <?php if ($register_status == 'success'): ?>
+                        <div class="alert success">Đăng ký thành công</div>
+                    <?php elseif ($register_status == 'error'): ?>
+                        <div class="alert error"><?php echo htmlspecialchars($register_msg); ?></div>
+                    <?php endif; ?>
             <div class="form-group">
-
-                <input type="text" placeholder="Email hoặc SĐT">
-
-                <input type="password" placeholder="Mật khẩu">
-
-                <input type="password" placeholder="Nhập lại mật khẩu">
-
+                <input type="text" name="email" placeholder="Email hoặc SĐT">
+                <input type="password" name="password" placeholder="Mật khẩu">
+                <input type="password" name="confirm_password" placeholder="Nhập lại mật khẩu">
             </div>
 
             <div class="checkbox-group">
-                <input type="checkbox" id="agree">
+                <input type="checkbox" name="agree" id="agree" required>
                     <label for="agree">
                         Tôi chấp nhận mọi điều kiện
                     </label>
             </div>
 
-            <button class="btn-submit">
+            <button type="submit" class="btn-submit">
                 Đăng ký
             </button>
+            </form>
 
             <div class="divider">
                 HOẶC
@@ -166,8 +195,20 @@ $result_thue = mysqli_query($conn, $sql_thue);
     </ul>
     
     <div class="navbar-actions">
-        <button class="btn-dang-nhap" onclick="openLogin()">Đăng nhập</button>
-        <button class="btn-dang-tin">Đăng tin miễn phí</button>
+        <?php if (isset($_SESSION['user'])): ?>
+
+            <span>Xin chào, <b><?php echo $_SESSION['user']['name']; ?></b></span>
+            <a href="logout.php">
+                <button class="btn-dang-nhap">Đăng xuất</button>
+            </a>
+
+        <?php else: ?>
+
+            <button class="btn-dang-nhap" onclick="openLogin()">Đăng nhập</button>
+
+        <?php endif; ?>
+
+            <button class="btn-dang-tin">Đăng tin miễn phí</button>
     </div>
 </nav>
 
@@ -196,10 +237,10 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
         <div class="card-img">
             <?php 
-                $base_img = "../uploads/"; 
+                $base_img = "/uploads/"; 
                 $thumb = !empty($item['image_url']) ? $base_img . $item['image_url'] : 'https://via.placeholder.com/400x250?text=No+Image';
             ?>
-            <img src="<?php echo $thumb; ?>" alt="<?php echo $item['title']; ?>">
+            <img src="<?php echo $thumb; ?>" alt="<?php echo htmlspecialchars($item['title']); ?>">
             
             <span class="badge 
             <?php echo $item['type'] == 'Cho thuê' ? 'badge-rent' : 'badge-sell'; ?>">
@@ -218,15 +259,15 @@ $result_thue = mysqli_query($conn, $sql_thue);
                 <?php 
                     // Tối ưu hiển thị giá: Nếu > 1 tỷ thì chia cho 1 tỷ
                     if($item['price'] >= 1000000000) {
-                        echo ($item['price'] / 1000000000) . " Tỷ";
+                        echo number_format($item['price'] / 1000000000,1) . " Tỷ";
                     } else {
-                        echo number_format($item['price'] / 1000000) . " Triệu";
+                        echo number_format($item['price'] / 1000000,1) . " Triệu";
                     }
                 ?>
             </div>
 
             <div class="title">
-                <?php echo $item['title']; ?>
+                <?php echo htmlspecialchars($item['title']); ?>
             </div>
 
             <div class="address">
@@ -265,12 +306,12 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
             <div class="card-img">
                 <?php 
-                    $base_img = "../uploads/"; 
+                    $base_img = "/uploads/"; 
                     $thumb = !empty($item['image_url']) 
                         ? $base_img . $item['image_url'] 
                         : 'https://via.placeholder.com/400x250?text=No+Image';
                 ?>
-                <img src="<?php echo $thumb; ?>" alt="<?php echo $item['title']; ?>">
+                <img src="<?php echo $thumb; ?>" alt="<?php echo htmlspecialchars($item['title']); ?>">
                 <span class="badge badge-sell">BÁN</span>
             </div>
 
@@ -279,24 +320,25 @@ $result_thue = mysqli_query($conn, $sql_thue);
                 <div class="price">
                     <?php 
                         if($item['price'] >= 1000000000) {
-                            echo ($item['price'] / 1000000000) . " Tỷ";
+                            echo number_format($item['price'] / 1000000000,1) . " Tỷ";
                         } else {
-                            echo number_format($item['price'] / 1000000) . " Triệu";
+                            echo number_format($item['price'] / 1000000,1) . " Triệu";
                         }
                     ?>
                 </div>
 
-                <div class="title"><?php echo $item['title']; ?></div>
+                <div class="title"><?php echo htmlspecialchars($item['title']); ?></div>
 
                 <div class="address">
                     📍 <?php echo ($item['district'] ?? 'N/A') . ", " . ($item['province'] ?? 'TP. HCM'); ?>
                 </div>
 
-                <div class="meta">
-                    <span>Diện Tích: <b><?php echo $item['area']; ?></b> m²</span> <br> 
-                    <span><b><?php echo $item['bedroom']; ?></b> PN</span>
-                    <span><b><?php echo $item['bathroom']; ?></b> WC</span>
-                </div>
+
+            <div class="meta">
+                <span>Diện Tích: <b><?php echo $item['area']; ?></b> m²</span> <br> 
+                <span>Loại Căn Hộ: <b><?php echo $item['bedroom']; ?></b>PN</span>
+                <span><b><?php echo $item['bathroom']; ?></b>WC</span>
+            </div>
 
                 <div class="meta-sub">
                     Nội thất: <?php echo $item['furniture']; ?>
@@ -329,12 +371,12 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
             <div class="card-img">
                 <?php 
-                    $base_img = "../uploads/"; 
+                    $base_img = "/uploads/"; 
                     $thumb = !empty($item['image_url']) 
                         ? $base_img . $item['image_url'] 
                         : 'https://via.placeholder.com/400x250?text=No+Image';
                 ?>
-                <img src="<?php echo $thumb; ?>" alt="<?php echo $item['title']; ?>">
+                <img src="<?php echo $thumb; ?>" alt="<?php echo htmlspecialchars($item['title']); ?>">
                 <span class="badge badge-rent">THUÊ</span>
             </div>
 
@@ -343,24 +385,25 @@ $result_thue = mysqli_query($conn, $sql_thue);
                 <div class="price">
                     <?php 
                         if($item['price'] >= 1000000000) {
-                            echo ($item['price'] / 1000000000) . " Tỷ";
+                            echo number_format($item['price'] / 1000000000,1) . " Tỷ";
                         } else {
-                            echo number_format($item['price'] / 1000000) . " Triệu";
+                            echo number_format($item['price'] / 1000000,1) . " Triệu";
                         }
                     ?>
                 </div>
 
-                <div class="title"><?php echo $item['title']; ?></div>
+                <div class="title"><?php echo htmlspecialchars($item['title']); ?></div>
 
                 <div class="address">
                     📍 <?php echo ($item['district'] ?? 'N/A') . ", " . ($item['province'] ?? 'TP. HCM'); ?>
                 </div>
 
-                <div class="meta">
-                    <span>Diện Tích: <b><?php echo $item['area']; ?></b> m²</span> <br> 
-                    <span><b><?php echo $item['bedroom']; ?></b> PN</span>
-                    <span><b><?php echo $item['bathroom']; ?></b> WC</span>
-                </div>
+ 
+            <div class="meta">
+                <span>Diện Tích: <b><?php echo $item['area']; ?></b> m²</span> <br> 
+                <span>Loại Căn Hộ: <b><?php echo $item['bedroom']; ?></b>PN</span>
+                <span><b><?php echo $item['bathroom']; ?></b>WC</span>
+            </div>
 
                 <div class="meta-sub">
                     Nội thất: <?php echo $item['furniture']; ?>
@@ -527,6 +570,32 @@ function toggleGioiThieu() {
         btn.innerText = "Xem thêm";
     }
 }
+window.onload = function() {
+
+    const loginStatus = "<?php echo $login_status; ?>";
+    const registerStatus = "<?php echo $register_status; ?>";
+
+    // ưu tiên login nếu có lỗi login
+    if (loginStatus === "error") {
+        openLogin();
+        return;
+    }
+
+    // register
+    if (registerStatus === "success" || registerStatus === "error") {
+        openRegister();
+
+        if (registerStatus === "success") {
+            setTimeout(() => {
+                closeRegister();
+                openLogin();
+            }, 1500);
+        }
+    }
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+    
 </script>
 
 </body>
