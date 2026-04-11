@@ -3,9 +3,9 @@ include(__DIR__ . "/../config/database.php");
     session_start();
 
 // REGISTER
-$register_status = $_SESSION['status'] ?? '';
-$register_msg = $_SESSION['msg'] ?? '';
-unset($_SESSION['status'], $_SESSION['msg']);
+$register_status = $_SESSION['register_status'] ?? '';
+$register_msg = $_SESSION['register_msg'] ?? '';
+unset($_SESSION['register_status'], $_SESSION['register_msg']);
 
 // LOGIN
 $login_status = $_SESSION['login_status'] ?? '';
@@ -96,7 +96,8 @@ $result_thue = mysqli_query($conn, $sql_thue);
             </button>
 
             <div class="register-link">
-                Chưa có tài khoản? <a href="#" onclick="openRegister()">Đăng ký ngay</a>
+                Chưa có tài khoản? <a href="#" onclick="openRegister()">Đăng ký ngay</a><br>
+                <span class="admin-entry">Bạn là quản lý? <a href="admin/login.php">Vào cổng Admin</a></span>
             </div>
         </div>
 
@@ -167,13 +168,16 @@ $result_thue = mysqli_query($conn, $sql_thue);
     <div class="navbar-actions">
         <?php if (isset($_SESSION['user'])): ?>
             <span>Xin chào, <b><?php echo $_SESSION['user']['name']; ?></b></span>
+            <a href="my-posts.php" class="admin-link-nav">Tin của tôi</a>
+            <a href="post-create.php" class="btn-link-reset"><button class="btn-dang-tin">Đăng tin</button></a>
             <a href="logout.php">
                 <button class="btn-dang-nhap">Đăng xuất</button>
             </a>
         <?php else: ?>
             <button class="btn-dang-nhap" onclick="openLogin()">Đăng nhập</button>
+            <button class="btn-dang-tin" onclick="openLogin()">Đăng tin</button>
         <?php endif; ?>
-        <button class="btn-dang-tin">Đăng tin miễn phí</button>
+        <a href="admin/login.php" class="admin-link-nav">Admin</a>
     </div>
 </nav>
 

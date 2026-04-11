@@ -88,15 +88,15 @@ $result_related = mysqli_query($conn, $sql_related);
                 <span class="user-greeting">
                     Xin chào, <b><?php echo htmlspecialchars($_SESSION['user']['name']); ?></b>
                 </span>
-
+                <a href="my-posts.php" class="admin-link-nav">Tin của tôi</a>
+                <a href="post-create.php" class="btn-link-reset"><button class="btn-dang-tin">Đăng tin</button></a>
                 <a href="logout.php" class="btn-logout">Đăng xuất</a>
             </div>
 
         <?php else: ?>
             <button class="btn-dang-nhap" onclick="openLogin()">Đăng nhập</button>
+            <button class="btn-dang-tin" onclick="openLogin()">Đăng tin</button>
         <?php endif; ?>
-
-        <button class="btn-dang-tin">Đăng tin miễn phí</button>
         </div>
 </nav>
 
