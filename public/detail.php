@@ -82,18 +82,32 @@ $result_related = mysqli_query($conn, $sql_related);
         <li><a href="#">Tin tức</a></li>
     </ul>
         <div class="navbar-actions">
-        <?php if(isset($_SESSION['user'])): ?>
+                    <?php if (isset($_SESSION['user'])): ?>
+                
+                <a href="post-create.php" class="btn-link-reset">
+                    <button class="btn-dang-tin">Đăng tin</button>
+                </a>
 
-            <div class="user-box">
-                <span class="user-greeting">
-                    Xin chào, <b><?php echo htmlspecialchars($_SESSION['user']['name']); ?></b>
-                </span>
-                <a href="my-posts.php" class="admin-link-nav">Tin của tôi</a>
-                <a href="post-create.php" class="btn-link-reset"><button class="btn-dang-tin">Đăng tin</button></a>
-                <a href="logout.php" class="btn-logout">Đăng xuất</a>
-            </div>
+                <div class="user-menu">
+                 <?php
+                        $avatar = !empty($_SESSION['user']['avatar'])
+                            ? "../uploads/avatar/" . $_SESSION['user']['avatar']
+                            : "https://via.placeholder.com/40";
+                        ?>
 
-        <?php else: ?>
+                        <div class="user-btn">
+                            <img src="<?= $avatar ?>" class="nav-avatar">
+                            <?php echo $_SESSION['user']['name']; ?> ▼
+                        </div>
+
+                    <div class="dropdown">
+                        <a href="profile.php"> Trang cá nhân</a>
+                        <a href="my-posts.php"> Tin của tôi</a>
+                        <a href="../modules/auth/logout.php"> Đăng xuất</a>
+                    </div>
+                </div>
+
+            <?php else: ?>
             <button class="btn-dang-nhap" onclick="openLogin()">Đăng nhập</button>
             <button class="btn-dang-tin" onclick="openLogin()">Đăng tin</button>
         <?php endif; ?>

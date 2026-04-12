@@ -52,11 +52,32 @@ function format_money_local($amount): string {
         <li><a href="post-create.php">Đăng tin</a></li>
         <li><a href="my-posts.php">Tin của tôi</a></li>
     </ul>
-    <div class="navbar-actions user-area">
-        <span style="color:#fff; font-weight:600;">Xin chào, <b><?php echo htmlspecialchars($user['name']); ?></b></span>
-        <a href="post-create.php"><button class="btn-dang-tin">Đăng tin mới</button></a>
-        <a href="logout.php"><button class="btn-dang-nhap">Đăng xuất</button></a>
-    </div>
+            <div class="navbar-actions user-area">
+
+                <a href="post-create.php">
+                    <button class="btn-dang-tin">Đăng tin mới</button>
+                </a>
+
+                <div class="user-menu">
+                   <?php
+                            $avatar = !empty($_SESSION['user']['avatar'])
+                                ? "../uploads/avatar/" . $_SESSION['user']['avatar']
+                                : "https://via.placeholder.com/40";
+                            ?>
+
+                            <div class="user-btn">
+                                <img src="<?= $avatar ?>" class="nav-avatar">
+                                <?php echo $_SESSION['user']['name']; ?> ▼
+                            </div>
+
+                    <div class="dropdown">
+                        <a href="profile.php"> Trang cá nhân</a>
+                        <a href="my-posts.php"> Tin của tôi</a>
+                        <a href="../modules/auth/logout.php"> Đăng xuất</a>
+                    </div>
+                </div>
+
+            </div>
 </nav>
 
 <div class="page-shell">

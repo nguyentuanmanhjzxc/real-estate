@@ -1,6 +1,6 @@
 <?php
     
-    include(__DIR__. "/../config/database.php");
+    include(__DIR__. "/../../config/database.php");
     session_start();
     $message = "";
     $type = "";
@@ -18,10 +18,10 @@
     }
 
 
-    if(strlen($password) < 8){
-        $message = "Mật khẩu phải hơn 8 kí tự";
-        $type= "error";
-    }
+    // if(strlen($password) < 8){
+    //     $message = "Mật khẩu phải hơn 8 kí tự";
+    //     $type= "error";
+    // }
     
     if($password != $confirm){
         $message = "Mật khẩu không khớp";
@@ -37,7 +37,7 @@
         }else if (preg_match('/^[0-9]{10,11}$/',$input)){
             $email = NULL;
             $phone = $input;
-            $name = "User_". substr($phone,-4);
+            $name = $phone;
 
         }else{
             $message= "Email hoặc số điện thoại không hợp lệ";
@@ -90,7 +90,7 @@
        $_SESSION['register_status'] = $type;
        $_SESSION['register_msg'] = $message;
 
-        header("Location: index.php");
+        header("Location:../../public/index.php");
         exit();
 } 
 

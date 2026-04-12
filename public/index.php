@@ -74,7 +74,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
             <h2>Đăng nhập</h2>
             <p>Chào mừng bạn đến với <b><?php echo $ten_trang; ?></b></p>
             <br>
-            <form method="post" action="login.php">
+            <form method="post" action="../modules/auth/login.php">
                 <?php if (!empty($login_msg)): ?>
                     <div class="alert error">
                         <?php echo htmlspecialchars($login_msg); ?>
@@ -124,7 +124,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
         <div class="login-left">
             <h2>Đăng ký</h2>
-            <form method="post" action="register.php">
+            <form method="post" action="../modules/auth/register.php">
                 <?php if ($register_status == 'success'): ?>
                     <div class="alert success">Đăng ký thành công</div>
                 <?php elseif ($register_status == 'error'): ?>
@@ -166,14 +166,32 @@ $result_thue = mysqli_query($conn, $sql_thue);
         <li><a href="#">Tin tức</a></li>
     </ul>
     <div class="navbar-actions">
-        <?php if (isset($_SESSION['user'])): ?>
-            <span>Xin chào, <b><?php echo $_SESSION['user']['name']; ?></b></span>
-            <a href="my-posts.php" class="admin-link-nav">Tin của tôi</a>
-            <a href="post-create.php" class="btn-link-reset"><button class="btn-dang-tin">Đăng tin</button></a>
-            <a href="logout.php">
-                <button class="btn-dang-nhap">Đăng xuất</button>
-            </a>
-        <?php else: ?>
+                        <?php if (isset($_SESSION['user'])): ?>
+                            
+                            <a href="post-create.php" class="btn-link-reset">
+                                <button class="btn-dang-tin">Đăng tin</button>
+                            </a>
+
+                            <div class="user-menu">
+                               <?php
+                                $avatar = !empty($_SESSION['user']['avatar'])
+                                    ? "../uploads/avatar/" . $_SESSION['user']['avatar']
+                                    : "https://via.placeholder.com/40";
+                                ?>
+
+                                <div class="user-btn">
+                                    <img src="<?= $avatar ?>" class="nav-avatar">
+                                    <?php echo $_SESSION['user']['name']; ?> ▼
+                                </div>
+
+                                <div class="dropdown">
+                                    <a href="profile.php"> Trang cá nhân</a>
+                                    <a href="my-posts.php">Tin của tôi</a>
+                                    <a href="../modules/auth/logout.php"> Đăng xuất</a>
+                                </div>
+                            </div>
+
+                        <?php else: ?>
             <button class="btn-dang-nhap" onclick="openLogin()">Đăng nhập</button>
             <button class="btn-dang-tin" onclick="openLogin()">Đăng tin</button>
         <?php endif; ?>
@@ -390,9 +408,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
 </footer>
 
 <script>
-// ================================
-// POPUP LOGIN / REGISTER
-// ================================
+
 function togglePopup(id, show = true) {
     document.getElementById(id).style.display = show ? "flex" : "none";
 }
@@ -402,9 +418,7 @@ function openRegister()  { togglePopup("registerPopup", true); }
 function closeRegister() { togglePopup("registerPopup", false); }
 function switchToLogin() { closeRegister(); openLogin(); }
 
-// ================================
-// SLIDER
-// ================================
+
 const sliderState = {};
 const GAP = 20;
 
@@ -481,9 +495,6 @@ window.addEventListener("resize", () => {
     initSlider("thue");
 });
 
-// ================================
-// GIỚI THIỆU - XEM THÊM
-// ================================
 function toggleGioiThieu() {
     const content = document.getElementById("gioiThieuContent");
     const btn     = document.getElementById("btnXemThem");
@@ -491,9 +502,7 @@ function toggleGioiThieu() {
     btn.innerText = content.classList.contains("expand") ? "Thu gọn" : "Xem thêm";
 }
 
-// ================================
-// AUTO OPEN POPUP KHI CÓ LỖI
-// ================================
+
 window.onload = function() {
     const loginStatus    = "<?php echo $login_status; ?>";
     const registerStatus = "<?php echo $register_status; ?>";

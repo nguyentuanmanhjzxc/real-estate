@@ -416,7 +416,6 @@ a {
   box-shadow: var(--shadow);
   border-radius: 28px;
   padding: 34px;
-  backdrop-filter: blur(12px);
 }
 
 .hero-chip {

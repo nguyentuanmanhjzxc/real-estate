@@ -1,5 +1,5 @@
 <?php
-include(__DIR__. "/../config/database.php");
+include(__DIR__. "/../../config/database.php");
 session_start();
 
 function isPasswordMatch($plainPassword, $storedHash) {
@@ -33,7 +33,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     if(empty($input) || empty($password)){
         $_SESSION['login_status'] = 'error';
         $_SESSION['login_msg'] = 'Vui lòng nhập thông tin đầy đủ';
-        header("Location: index.php");
+        header("Location: ../../public/index.php");
         exit();
     }
 
@@ -79,7 +79,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
         'role' => $user['role_id']
     ];
 
-    header("Location: index.php");
+    header("Location: ../../public/index.php");
     exit();
 }
 ?>

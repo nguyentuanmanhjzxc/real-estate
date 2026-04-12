@@ -171,7 +171,7 @@
 
 .g-badge.sell { background: var(--cam); color: #fff; }
 .g-badge.rent { background: #1a9e5c; color: #fff; }
-.g-badge.proj { background: rgba(0, 0, 0, 0.55); color: #fff; backdrop-filter: blur(4px); }
+.g-badge.proj { background: rgba(0, 0, 0, 0.55); color: #fff; }
 
 /* Đếm ảnh */
 .g-counter {
@@ -184,7 +184,7 @@
     border-radius: 20px;
     font-size: 12px;
     font-weight: 500;
-    backdrop-filter: blur(4px);
+
     z-index: 3;
 }
 
