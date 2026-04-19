@@ -21,9 +21,24 @@ function upgradeLegacyHash($conn, $userId, $plainPassword, $storedHash) {
 
     $newHash = password_hash($plainPassword, PASSWORD_DEFAULT);
     $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-    $stmt->bind_param("si", $newHash, $userId);
-    $stmt->execute();
-    $stmt->close();
+    if ($stmt) {
+        $stmt->bind_param("si", $newHash, $userId);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+function redirectWithMessage($status, $message, $query = '') {
+    $_SESSION['login_status'] = $status;
+    $_SESSION['login_msg'] = $message;
+
+    $location = '../../public/index.php';
+    if ($query !== '') {
+        $location .= '?' . ltrim($query, '?');
+    }
+
+    header('Location: ' . $location);
+    exit();
 }
 
 if($_SERVER["REQUEST_METHOD"] == "POST"){
@@ -31,16 +46,19 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $password = $_POST['password'] ?? '';
 
     if(empty($input) || empty($password)){
-        $_SESSION['login_status'] = 'error';
-        $_SESSION['login_msg'] = 'Vui lòng nhập thông tin đầy đủ';
-        header("Location: ../../public/index.php");
-        exit();
+        redirectWithMessage('error', 'Vui lòng nhập đầy đủ email/số điện thoại và mật khẩu', 'open_login=1');
     }
 
-    if(filter_var($input, FILTER_VALIDATE_EMAIL)){
-        $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+    $isEmailLogin = filter_var($input, FILTER_VALIDATE_EMAIL);
+
+    if($isEmailLogin){
+        $stmt = $conn->prepare("SELECT id, name, email, phone, password, role_id, avatar FROM users WHERE email = ? LIMIT 1");
     } else {
-        $stmt = $conn->prepare("SELECT * FROM users WHERE phone = ?");
+        $stmt = $conn->prepare("SELECT id, name, email, phone, password, role_id, avatar FROM users WHERE phone = ? LIMIT 1");
+    }
+
+    if (!$stmt) {
+        redirectWithMessage('error', 'Không thể xử lý đăng nhập lúc này', 'open_login=1');
     }
 
     $stmt->bind_param("s", $input);
@@ -48,38 +66,47 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
     $result = $stmt->get_result();
 
     if($result->num_rows == 0){
-        $_SESSION['login_status'] = 'error';
-        $_SESSION['login_msg'] = 'Tài khoản không tồn tại';
-        header("Location: index.php");
-        exit();
+        $stmt->close();
+        redirectWithMessage('error', 'Tài khoản không tồn tại', 'open_login=1');
     }
 
     $user = $result->fetch_assoc();
     $stmt->close();
 
     if(!isPasswordMatch($password, $user['password'])){
-        $_SESSION['login_status'] = 'error';
-        $_SESSION['login_msg'] = 'Sai mật khẩu';
-        header("Location: index.php");
-        exit();
+        redirectWithMessage('error', 'Sai mật khẩu', 'open_login=1');
     }
 
     if ((int)$user['role_id'] === 1) {
-        $_SESSION['login_status'] = 'error';
-        $_SESSION['login_msg'] = 'Tài khoản quản trị vui lòng đăng nhập tại cổng Admin.';
-        header("Location: index.php");
-        exit();
+        if (!$isEmailLogin) {
+            redirectWithMessage('error', 'Tài khoản admin phải đăng nhập bằng Gmail.', 'admin_login=1');
+        }
+
+        if (!preg_match('/^[a-zA-Z0-9._%+-]+@gmail\.com$/', (string)($user['email'] ?? ''))) {
+            redirectWithMessage('error', 'Tài khoản admin chỉ được phép dùng Gmail để đăng nhập.', 'admin_login=1');
+        }
     }
 
     upgradeLegacyHash($conn, (int)$user['id'], $password, $user['password']);
 
     $_SESSION['user'] = [
-        'id' => $user['id'],
+        'id' => (int)$user['id'],
         'name' => $user['name'],
-        'role' => $user['role_id']
+        'email' => $user['email'],
+        'phone' => $user['phone'],
+        'role' => (int)$user['role_id'],
+        'avatar' => $user['avatar'] ?? ''
     ];
+
+    if ((int)$user['role_id'] === 1) {
+        header("Location: ../../admin/dashboard.php");
+        exit();
+    }
 
     header("Location: ../../public/index.php");
     exit();
 }
+
+header('Location: ../../public/index.php');
+exit();
 ?>

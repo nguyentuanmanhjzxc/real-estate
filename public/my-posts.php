@@ -10,6 +10,7 @@ if (empty($_SESSION['user'])) {
 $ten_trang = 'TheApartment';
 $user = $_SESSION['user'];
 $userId = (int)($user['id'] ?? 0);
+$isAdmin = (int)($user['role'] ?? 0) === 1;
 
 $myPosts = mysqli_query($conn, "
     SELECT p.id, p.title, p.price, p.area, p.type, p.status, p.created_at, p.bedroom, p.bathroom,
@@ -71,9 +72,12 @@ function format_money_local($amount): string {
                             </div>
 
                     <div class="dropdown">
-                        <a href="profile.php"> Trang cá nhân</a>
-                        <a href="my-posts.php"> Tin của tôi</a>
-                        <a href="../modules/auth/logout.php"> Đăng xuất</a>
+                        <a href="profile.php">Trang cá nhân</a>
+                        <a href="my-posts.php">Tin của tôi</a>
+                        <?php if ($isAdmin): ?>
+                            <a href="../admin/dashboard.php">Quay lại trang admin</a>
+                        <?php endif; ?>
+                        <a href="../modules/auth/logout.php">Đăng xuất</a>
                     </div>
                 </div>
 

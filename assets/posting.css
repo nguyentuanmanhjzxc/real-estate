@@ -701,3 +701,16 @@
     align-items: stretch;
   }
 }
+
+
+.form-submit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.form-submit-actions button {
+  font: inherit;
+}

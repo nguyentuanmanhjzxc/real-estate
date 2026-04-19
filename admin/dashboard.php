@@ -4,8 +4,8 @@ require_admin();
 
 $pageTitle = 'Admin Dashboard';
 $activeMenu = 'dashboard';
-$pageHeading = 'Chào mừng trở lại';
-$pageDescription = 'Đây là tổng quan hoạt động của hệ thống bất động sản hôm nay.';
+$pageHeading = 'Bảng điều khiển';
+$pageDescription = 'Theo dõi nhanh tình trạng tin đăng, người dùng và liên hệ trên hệ thống.';
 
 $totalPosts = (int) get_single_value($conn, 'SELECT COUNT(*) FROM post');
 $activePosts = (int) get_single_value($conn, 'SELECT COUNT(*) FROM post WHERE status = 1');
@@ -27,14 +27,6 @@ $recentRequests = mysqli_query($conn, "
     LIMIT 6
 ");
 
-$featuredPosts = mysqli_query($conn, "
-    SELECT p.id, p.title, p.price, p.type, p.is_vip, p.created_at, pr.name AS project_name
-    FROM post p
-    LEFT JOIN projects pr ON p.project_id = pr.id
-    WHERE p.status = 1
-    ORDER BY p.is_vip DESC, p.created_at DESC
-    LIMIT 5
-");
 
 include(__DIR__ . '/includes/header.php');
 ?>
@@ -145,35 +137,7 @@ include(__DIR__ . '/includes/header.php');
             </div>
         </section>
 
-        <section class="panel-card compact">
-            <div class="panel-head solo">
-                <div>
-                    <h3>Tin nổi bật</h3>
-                    <p>Các bài đăng ưu tiên hoặc mới nhất</p>
-                </div>
-            </div>
 
-            <div class="feature-list">
-                <?php if ($featuredPosts && mysqli_num_rows($featuredPosts) > 0): ?>
-                    <?php while ($post = mysqli_fetch_assoc($featuredPosts)): ?>
-                        <div class="feature-item">
-                            <div>
-                                <strong><?php echo h($post['title']); ?></strong>
-                                <div class="cell-sub"><?php echo h($post['project_name'] ?: 'Chưa gán dự án'); ?></div>
-                            </div>
-                            <div class="feature-meta">
-                                <span class="status-badge <?php echo ((int) $post['is_vip'] === 1) ? 'primary' : 'neutral'; ?>">
-                                    <?php echo ((int) $post['is_vip'] === 1) ? 'VIP' : h($post['type']); ?>
-                                </span>
-                                <strong><?php echo h(format_money($post['price'])); ?></strong>
-                            </div>
-                        </div>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <div class="empty-state small">Chưa có dữ liệu căn hộ để hiển thị.</div>
-                <?php endif; ?>
-            </div>
-        </section>
     </aside>
 </div>
 <?php include(__DIR__ . '/includes/footer.php'); ?>

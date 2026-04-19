@@ -2,7 +2,26 @@
 session_start();
 include("../config/database.php");
 $ten_trang = "TheApartment";
+$isAdmin = !empty($_SESSION['user']) && (int)($_SESSION['user']['role'] ?? 0) === 1;
 $nam_hien_tai = date("Y");
+
+$keyword = trim($_GET['keyword'] ?? '');
+$filterLocation = trim($_GET['location'] ?? '');
+$filterType = trim($_GET['type_filter'] ?? '');
+$filterArea = trim($_GET['area_filter'] ?? '');
+$filterPrice = trim($_GET['price_filter'] ?? '');
+$hasSearchFilters = $keyword !== '' || $filterLocation !== '' || $filterType !== '' || $filterArea !== '' || $filterPrice !== '';
+
+$locationOptions = [];
+$locationQuery = mysqli_query($conn, "SELECT DISTINCT district, province FROM projects WHERE (district IS NOT NULL AND district <> '') OR (province IS NOT NULL AND province <> '') ORDER BY province ASC, district ASC");
+if ($locationQuery) {
+    while ($loc = mysqli_fetch_assoc($locationQuery)) {
+        $label = trim(($loc['district'] ?? '') . (($loc['district'] && $loc['province']) ? ', ' : '') . ($loc['province'] ?? ''));
+        if ($label !== '') {
+            $locationOptions[$label] = $label;
+        }
+    }
+}
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($id <= 0) { header("Location: index.php"); exit; }
@@ -24,6 +43,83 @@ $images = [];
 while ($img = mysqli_fetch_assoc($result_imgs)) { $images[] = $img; }
 if (empty($images)) { $images[] = ['image_url' => '', 'is_thumbnail' => 1]; }
 
+$searchResult = null;
+$searchCount = 0;
+if ($hasSearchFilters) {
+    $typeMap = [
+        'mua-ban' => 'Chuyển nhượng',
+        'cho-thue' => 'Cho thuê',
+    ];
+
+    $conditions = ["post.status = 1"];
+
+    if ($keyword !== '') {
+        $kw = mysqli_real_escape_string($conn, $keyword);
+        $conditions[] = "(post.title LIKE '%{$kw}%' OR COALESCE(post.description, '') LIKE '%{$kw}%' OR COALESCE(post.content, '') LIKE '%{$kw}%' OR COALESCE(projects.name, '') LIKE '%{$kw}%' OR COALESCE(projects.district, '') LIKE '%{$kw}%' OR COALESCE(projects.province, '') LIKE '%{$kw}%')";
+    }
+
+    if ($filterLocation !== '') {
+        $loc = mysqli_real_escape_string($conn, $filterLocation);
+        $conditions[] = "(COALESCE(projects.district, '') LIKE '%{$loc}%' OR COALESCE(projects.province, '') LIKE '%{$loc}%' OR CONCAT(COALESCE(projects.district, ''), ', ', COALESCE(projects.province, '')) LIKE '%{$loc}%')";
+    }
+
+    if (isset($typeMap[$filterType])) {
+        $typeValue = mysqli_real_escape_string($conn, $typeMap[$filterType]);
+        $conditions[] = "post.type = '{$typeValue}'";
+    }
+
+    switch ($filterArea) {
+        case 'duoi-50':
+            $conditions[] = 'post.area < 50';
+            break;
+        case '50-80':
+            $conditions[] = 'post.area >= 50 AND post.area <= 80';
+            break;
+        case '80-120':
+            $conditions[] = 'post.area > 80 AND post.area <= 120';
+            break;
+        case 'tren-120':
+            $conditions[] = 'post.area > 120';
+            break;
+    }
+
+    switch ($filterPrice) {
+        case 'duoi-2-ty':
+            $conditions[] = 'post.price < 2000000000';
+            break;
+        case '2-5-ty':
+            $conditions[] = 'post.price >= 2000000000 AND post.price <= 5000000000';
+            break;
+        case '5-10-ty':
+            $conditions[] = 'post.price > 5000000000 AND post.price <= 10000000000';
+            break;
+        case 'tren-10-ty':
+            $conditions[] = 'post.price > 10000000000';
+            break;
+        case 'duoi-10-trieu':
+            $conditions[] = 'post.price < 10000000';
+            break;
+        case '10-20-trieu':
+            $conditions[] = 'post.price >= 10000000 AND post.price <= 20000000';
+            break;
+        case 'tren-20-trieu':
+            $conditions[] = 'post.price > 20000000';
+            break;
+    }
+
+    $searchSql = "SELECT post.*, images.image_url, projects.province, projects.district
+                  FROM post
+                  LEFT JOIN images ON post.id = images.post_id AND images.is_thumbnail = 1
+                  LEFT JOIN projects ON post.project_id = projects.id
+                  WHERE " . implode(' AND ', $conditions) . "
+                  ORDER BY post.created_at DESC
+                  LIMIT 8";
+    $searchResult = mysqli_query($conn, $searchSql);
+    if ($searchResult) {
+        $searchCount = mysqli_num_rows($searchResult);
+    }
+}
+
 // Tin liên quan
 $sql_related = "SELECT post.*, images.image_url, projects.province, projects.district
                 FROM post
@@ -31,7 +127,9 @@ $sql_related = "SELECT post.*, images.image_url, projects.province, projects.dis
                 LEFT JOIN projects ON post.project_id = projects.id
                 WHERE post.status = 1 AND post.id != $id
                 ORDER BY post.created_at DESC LIMIT 4";
-$result_related = mysqli_query($conn, $sql_related);
+$result_listing = mysqli_query($conn, $sql_related);
+$listingTitle = 'Các tin đăng tương tự';
+$emptyMessage = 'Chưa có tin đăng tương tự để hiển thị.';
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -52,7 +150,7 @@ $result_related = mysqli_query($conn, $sql_related);
         <div class="login-left">
             <h2>Đăng nhập</h2>
             <p>Chào mừng bạn đến với <b><?php echo $ten_trang; ?></b></p><br>
-            <form method="post" action="login.php">
+            <form method="post" action="../modules/auth/login.php">
             <input type="text" name="email" placeholder="Email">
             <input type="password" name="password" placeholder="Mật khẩu">
             <div class="forgot-text">Quên mật khẩu?</div>
@@ -78,6 +176,9 @@ $result_related = mysqli_query($conn, $sql_related);
     <ul class="navbar-menu">
         <li><a href="index.php">Mua bán</a></li>
         <li><a href="index.php">Cho thuê</a></li>
+        <?php if (isset($_SESSION['user'])): ?>
+            <li><a href="my-posts.php">Tin của tôi</a></li>
+        <?php endif; ?>
         <li><a href="#">Dự án</a></li>
         <li><a href="#">Tin tức</a></li>
     </ul>
@@ -101,9 +202,12 @@ $result_related = mysqli_query($conn, $sql_related);
                         </div>
 
                     <div class="dropdown">
-                        <a href="profile.php"> Trang cá nhân</a>
-                        <a href="my-posts.php"> Tin của tôi</a>
-                        <a href="../modules/auth/logout.php"> Đăng xuất</a>
+                        <a href="profile.php">Trang cá nhân</a>
+                        <a href="my-posts.php">Tin của tôi</a>
+                        <?php if ($isAdmin): ?>
+                            <a href="../admin/dashboard.php">Quay lại trang admin</a>
+                        <?php endif; ?>
+                        <a href="../modules/auth/logout.php">Đăng xuất</a>
                     </div>
                 </div>
 
@@ -114,30 +218,84 @@ $result_related = mysqli_query($conn, $sql_related);
         </div>
 </nav>
 
-<!-- SEARCH BAR -->
-<div class="search-bar">
-    <div class="search-box">
-        <input type="text" placeholder="Tìm kiếm căn hộ, khu vực, dự án...">
-        <button>Tìm kiếm</button>
-    </div>
-</div>
+<section class="detail-search-strip">
+    <div class="detail-search-inner">
+        <form method="get" action="detail.php" class="home-search-form">
+            <input type="hidden" name="id" value="<?php echo (int)$id; ?>">
+            <div class="hop-tim-kiem home-hero-search">
+                <input type="text" name="keyword" value="<?php echo htmlspecialchars($keyword); ?>" placeholder="Tìm kiếm căn hộ, khu vực, dự án...">
+                <button type="submit" class="btn-tim-kiem">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <span>Tìm kiếm</span>
+                </button>
+            </div>
 
-<!-- FILTER BAR -->
-<div class="filter-bar">
-    <select class="filter-select"><option>Loại</option><option>Mua bán</option><option>Cho thuê</option></select>
-    <select class="filter-select"><option>Căn hộ chung cư</option><option>Căn hộ dịch vụ</option><option>Penthouse</option></select>
-    <select class="filter-select"><option>Vũng Tàu</option><option>TP. HCM</option><option>Hà Nội</option></select>
-    <select class="filter-select"><option>Diện Tích</option><option>Dưới 50m²</option><option>50–80m²</option><option>Trên 80m²</option></select>
-    <select class="filter-select"><option>Môi giới chuyên nghiệp</option><option>Cá nhân</option></select>
-</div>
+            <div class="home-search-panel detail-filter-panel">
+                <div class="home-filter-grid">
+                    <div class="home-filter-item">
+                        <label for="type_filter">Loại</label>
+                        <select id="type_filter" name="type_filter" class="home-filter-select">
+                            <option value="">Tất cả</option>
+                            <option value="mua-ban" <?php echo $filterType === 'mua-ban' ? 'selected' : ''; ?>>Mua bán</option>
+                            <option value="cho-thue" <?php echo $filterType === 'cho-thue' ? 'selected' : ''; ?>>Cho thuê</option>
+                        </select>
+                    </div>
+
+                    <div class="home-filter-item">
+                        <label for="location">Khu vực</label>
+                        <select id="location" name="location" class="home-filter-select">
+                            <option value="">Tất cả khu vực</option>
+                            <?php foreach ($locationOptions as $locationLabel): ?>
+                                <option value="<?php echo htmlspecialchars($locationLabel); ?>" <?php echo $filterLocation === $locationLabel ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($locationLabel); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="home-filter-item">
+                        <label for="price_filter">Giá</label>
+                        <select id="price_filter" name="price_filter" class="home-filter-select">
+                            <option value="">Tất cả mức giá</option>
+                            <option value="duoi-2-ty" <?php echo $filterPrice === 'duoi-2-ty' ? 'selected' : ''; ?>>Dưới 2 tỷ</option>
+                            <option value="2-5-ty" <?php echo $filterPrice === '2-5-ty' ? 'selected' : ''; ?>>2 - 5 tỷ</option>
+                            <option value="5-10-ty" <?php echo $filterPrice === '5-10-ty' ? 'selected' : ''; ?>>5 - 10 tỷ</option>
+                            <option value="tren-10-ty" <?php echo $filterPrice === 'tren-10-ty' ? 'selected' : ''; ?>>Trên 10 tỷ</option>
+                            <option value="duoi-10-trieu" <?php echo $filterPrice === 'duoi-10-trieu' ? 'selected' : ''; ?>>Dưới 10 triệu/tháng</option>
+                            <option value="10-20-trieu" <?php echo $filterPrice === '10-20-trieu' ? 'selected' : ''; ?>>10 - 20 triệu/tháng</option>
+                            <option value="tren-20-trieu" <?php echo $filterPrice === 'tren-20-trieu' ? 'selected' : ''; ?>>Trên 20 triệu/tháng</option>
+                        </select>
+                    </div>
+
+                    <div class="home-filter-item">
+                        <label for="area_filter">Diện tích</label>
+                        <select id="area_filter" name="area_filter" class="home-filter-select">
+                            <option value="">Tất cả diện tích</option>
+                            <option value="duoi-50" <?php echo $filterArea === 'duoi-50' ? 'selected' : ''; ?>>Dưới 50m²</option>
+                            <option value="50-80" <?php echo $filterArea === '50-80' ? 'selected' : ''; ?>>50 - 80m²</option>
+                            <option value="80-120" <?php echo $filterArea === '80-120' ? 'selected' : ''; ?>>80 - 120m²</option>
+                            <option value="tren-120" <?php echo $filterArea === 'tren-120' ? 'selected' : ''; ?>>Trên 120m²</option>
+                        </select>
+                    </div>
+
+                    <div class="home-filter-actions">
+                        <button type="submit" class="home-apply-btn">Áp dụng bộ lọc</button>
+                        <a href="detail.php?id=<?php echo (int)$id; ?>" class="home-reset-btn">Đặt lại</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
 
 <!-- BREADCRUMB -->
-<div class="breadcrumb">
+<div class="breadcrumb detail-breadcrumb-after-search">
     <a href="index.php">Trang chủ</a>
     <span class="sep">›</span>
-    <a href="index.php">tổng trang</a>
-    <span class="sep">›</span>
-    <a href="#">khu nhận sao / đề tở ra được trang này</a>
+    <a href="index.php">Danh sách căn hộ</a>
     <span class="sep">›</span>
     <span class="bc-current"><?php echo htmlspecialchars(mb_strimwidth($item['title'], 0, 50, '...')); ?></span>
 </div>
@@ -367,11 +525,46 @@ $result_related = mysqli_query($conn, $sql_related);
 
 </div><!-- /detail-layout -->
 
+<?php if ($hasSearchFilters): ?>
+<div class="related-wrap detail-filter-results">
+    <h2 class="khoi-tieude">Kết quả tìm kiếm</h2>
+    <p class="search-result-note">Tìm thấy <b><?php echo (int)$searchCount; ?></b> tin phù hợp với bộ lọc của bạn.</p>
+    <div class="grid-4">
+        <?php if ($searchResult && mysqli_num_rows($searchResult) > 0): ?>
+            <?php while($searchItem = mysqli_fetch_assoc($searchResult)): ?>
+                <a href="detail.php?id=<?php echo $searchItem['id']; ?>" style="text-decoration:none;color:inherit;display:block">
+                    <div class="card">
+                        <div class="card-img">
+                            <?php $searchThumb = !empty($searchItem['image_url']) ? '../uploads/' . $searchItem['image_url'] : 'https://via.placeholder.com/400x220?text=No+Image'; ?>
+                            <img src="<?php echo $searchThumb; ?>" alt="<?php echo htmlspecialchars($searchItem['title']); ?>">
+                            <span class="badge <?php echo $searchItem['type'] == 'Cho thuê' ? 'badge-rent' : 'badge-sell'; ?>">
+                                <?php echo $searchItem['type'] == 'Cho thuê' ? 'THUÊ' : 'CHUYỂN NHƯỢNG'; ?>
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="price">
+                                <?php echo $searchItem['price'] >= 1000000000 ? number_format($searchItem['price'] / 1000000000, 1) . ' Tỷ' : number_format($searchItem['price'] / 1000000, 1) . ' Triệu'; ?>
+                            </div>
+                            <div class="title"><?php echo htmlspecialchars($searchItem['title']); ?></div>
+                            <div class="address">📍 <?php echo htmlspecialchars(($searchItem['district'] ?? 'N/A') . ', ' . ($searchItem['province'] ?? 'TP. HCM')); ?></div>
+                            <div class="meta"><?php echo $searchItem['area']; ?> m² · <?php echo $searchItem['bedroom']; ?> PN · <?php echo $searchItem['bathroom']; ?> WC</div>
+                        </div>
+                    </div>
+                </a>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <div class="empty-search-results">Không tìm thấy tin đăng phù hợp với bộ lọc bạn đã chọn.</div>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- TIN TƯƠNG TỰ -->
 <div class="related-wrap">
-    <h2 class="khoi-tieude">Các tin đăng tương tự</h2>
+    <h2 class="khoi-tieude"><?php echo $listingTitle; ?></h2>
     <div class="grid-4">
-        <?php while ($rel = mysqli_fetch_assoc($result_related)): ?>
+        <?php if ($result_listing && mysqli_num_rows($result_listing) > 0): ?>
+        <?php while ($rel = mysqli_fetch_assoc($result_listing)): ?>
         <?php $rt = !empty($rel['image_url']) ? "../uploads/" . $rel['image_url'] : 'https://via.placeholder.com/400x220?text=No+Image'; ?>
         <a href="detail.php?id=<?php echo $rel['id']; ?>" style="text-decoration:none;color:inherit;display:block">
             <div class="card">
@@ -388,6 +581,9 @@ $result_related = mysqli_query($conn, $sql_related);
             </div>
         </a>
         <?php endwhile; ?>
+        <?php else: ?>
+            <div class="detail-empty-results"><?php echo $emptyMessage; ?></div>
+        <?php endif; ?>
     </div>
 </div>
 

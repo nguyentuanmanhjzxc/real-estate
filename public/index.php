@@ -1,6 +1,6 @@
 <?php
 include(__DIR__ . "/../config/database.php");
-    session_start();
+session_start();
 
 // REGISTER
 $register_status = $_SESSION['register_status'] ?? '';
@@ -14,6 +14,102 @@ unset($_SESSION['login_status'], $_SESSION['login_msg']);
 
 $nam_hien_tai = date("Y");
 $ten_trang = "TheApartment";
+$isAdmin = !empty($_SESSION['user']) && (int)($_SESSION['user']['role'] ?? 0) === 1;
+
+$keyword = trim($_GET['keyword'] ?? '');
+$filterLocation = trim($_GET['location'] ?? '');
+$filterType = trim($_GET['type_filter'] ?? '');
+$filterArea = trim($_GET['area_filter'] ?? '');
+$filterPrice = trim($_GET['price_filter'] ?? '');
+$hasSearchFilters = $keyword !== '' || $filterLocation !== '' || $filterType !== '' || $filterArea !== '' || $filterPrice !== '';
+
+$locationOptions = [];
+$locationQuery = mysqli_query($conn, "SELECT DISTINCT district, province FROM projects WHERE (district IS NOT NULL AND district <> '') OR (province IS NOT NULL AND province <> '') ORDER BY province ASC, district ASC");
+if ($locationQuery) {
+    while ($loc = mysqli_fetch_assoc($locationQuery)) {
+        $label = trim(($loc['district'] ?? '') . (($loc['district'] && $loc['province']) ? ', ' : '') . ($loc['province'] ?? ''));
+        if ($label !== '') {
+            $locationOptions[$label] = $label;
+        }
+    }
+}
+
+$searchResult = null;
+$searchCount = 0;
+if ($hasSearchFilters) {
+    $typeMap = [
+        'mua-ban' => 'Chuyển nhượng',
+        'cho-thue' => 'Cho thuê',
+    ];
+
+    $conditions = ["post.status = 1"];
+
+    if ($keyword !== '') {
+        $kw = mysqli_real_escape_string($conn, $keyword);
+        $conditions[] = "(post.title LIKE '%{$kw}%' OR COALESCE(post.description, '') LIKE '%{$kw}%' OR COALESCE(post.content, '') LIKE '%{$kw}%' OR COALESCE(projects.name, '') LIKE '%{$kw}%' OR COALESCE(projects.district, '') LIKE '%{$kw}%' OR COALESCE(projects.province, '') LIKE '%{$kw}%')";
+    }
+
+    if ($filterLocation !== '') {
+        $loc = mysqli_real_escape_string($conn, $filterLocation);
+        $conditions[] = "(COALESCE(projects.district, '') LIKE '%{$loc}%' OR COALESCE(projects.province, '') LIKE '%{$loc}%' OR CONCAT(COALESCE(projects.district, ''), ', ', COALESCE(projects.province, '')) LIKE '%{$loc}%')";
+    }
+
+    if (isset($typeMap[$filterType])) {
+        $typeValue = mysqli_real_escape_string($conn, $typeMap[$filterType]);
+        $conditions[] = "post.type = '{$typeValue}'";
+    }
+
+    switch ($filterArea) {
+        case 'duoi-50':
+            $conditions[] = 'post.area < 50';
+            break;
+        case '50-80':
+            $conditions[] = 'post.area >= 50 AND post.area <= 80';
+            break;
+        case '80-120':
+            $conditions[] = 'post.area > 80 AND post.area <= 120';
+            break;
+        case 'tren-120':
+            $conditions[] = 'post.area > 120';
+            break;
+    }
+
+    switch ($filterPrice) {
+        case 'duoi-2-ty':
+            $conditions[] = 'post.price < 2000000000';
+            break;
+        case '2-5-ty':
+            $conditions[] = 'post.price >= 2000000000 AND post.price <= 5000000000';
+            break;
+        case '5-10-ty':
+            $conditions[] = 'post.price > 5000000000 AND post.price <= 10000000000';
+            break;
+        case 'tren-10-ty':
+            $conditions[] = 'post.price > 10000000000';
+            break;
+        case 'duoi-10-trieu':
+            $conditions[] = 'post.price < 10000000';
+            break;
+        case '10-20-trieu':
+            $conditions[] = 'post.price >= 10000000 AND post.price <= 20000000';
+            break;
+        case 'tren-20-trieu':
+            $conditions[] = 'post.price > 20000000';
+            break;
+    }
+
+    $searchSql = "SELECT post.*, images.image_url, projects.province, projects.district
+                  FROM post
+                  LEFT JOIN images ON post.id = images.post_id AND images.is_thumbnail = 1
+                  LEFT JOIN projects ON post.project_id = projects.id
+                  WHERE " . implode(' AND ', $conditions) . "
+                  ORDER BY post.created_at DESC
+                  LIMIT 12";
+    $searchResult = mysqli_query($conn, $searchSql);
+    if ($searchResult) {
+        $searchCount = mysqli_num_rows($searchResult);
+    }
+}
 
 // Căn hộ mới nhất
 $sql = "SELECT post.*, images.image_url, projects.province, projects.district
@@ -81,10 +177,11 @@ $result_thue = mysqli_query($conn, $sql_thue);
                     </div>
                 <?php endif; ?>
                 <div class="form-group">
-                    <input type="text" name="email" placeholder="Email" required>
+                    <input type="text" name="email" placeholder="Email hoặc số điện thoại" required>
                     <input type="password" name="password" placeholder="Mật khẩu" required>
                 </div>
                 <div class="forgot-text">Quên mật khẩu?</div>
+                <div class="admin-entry" style="margin-top: 8px;">Nếu là admin, hãy dùng đúng Gmail quản trị và mật khẩu riêng để vào dashboard.</div>
                 <button type="submit" class="btn-submit">Đăng nhập</button>
             </form>
 
@@ -97,7 +194,7 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
             <div class="register-link">
                 Chưa có tài khoản? <a href="#" onclick="openRegister()">Đăng ký ngay</a><br>
-                <span class="admin-entry">Bạn là quản lý? <a href="admin/login.php">Vào cổng Admin</a></span>
+                <span class="admin-entry">Admin cũng đăng nhập ngay tại form này bằng Gmail được cấp quyền.</span>
             </div>
         </div>
 
@@ -162,6 +259,9 @@ $result_thue = mysqli_query($conn, $sql_thue);
     <ul class="navbar-menu">
         <li><a href="#">Mua bán</a></li>
         <li><a href="#">Cho thuê</a></li>
+        <?php if (isset($_SESSION['user'])): ?>
+            <li><a href="my-posts.php">Tin của tôi</a></li>
+        <?php endif; ?>
         <li><a href="#">Dự án</a></li>
         <li><a href="#">Tin tức</a></li>
     </ul>
@@ -185,9 +285,12 @@ $result_thue = mysqli_query($conn, $sql_thue);
                                 </div>
 
                                 <div class="dropdown">
-                                    <a href="profile.php"> Trang cá nhân</a>
+                                    <a href="profile.php">Trang cá nhân</a>
                                     <a href="my-posts.php">Tin của tôi</a>
-                                    <a href="../modules/auth/logout.php"> Đăng xuất</a>
+                                    <?php if ($isAdmin): ?>
+                                        <a href="../admin/dashboard.php">Quay lại trang admin</a>
+                                    <?php endif; ?>
+                                    <a href="../modules/auth/logout.php">Đăng xuất</a>
                                 </div>
                             </div>
 
@@ -195,27 +298,133 @@ $result_thue = mysqli_query($conn, $sql_thue);
             <button class="btn-dang-nhap" onclick="openLogin()">Đăng nhập</button>
             <button class="btn-dang-tin" onclick="openLogin()">Đăng tin</button>
         <?php endif; ?>
-        <a href="admin/login.php" class="admin-link-nav">Admin</a>
+        <a href="../admin/dashboard.php" class="admin-link-nav">Admin</a>
     </div>
 </nav>
 
 <!-- BANNER -->
 <section class="banner">
     <h1>Hàng nghìn căn hộ đang chờ bạn tại <?php echo $ten_trang; ?></h1>
-    <div class="hop-tim-kiem">
-        <input type="text" placeholder="Bạn muốn tìm căn hộ ở đâu?" />
-        <button class="btn-tim-kiem">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <span>Tìm kiếm</span>
-        </button>
-    </div>
+    <form method="get" action="index.php" class="home-search-form">
+        <div class="hop-tim-kiem home-hero-search">
+            <input type="text" name="keyword" value="<?php echo htmlspecialchars($keyword); ?>" placeholder="Tìm kiếm căn hộ, khu vực, dự án..." />
+            <button type="submit" class="btn-tim-kiem">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>Tìm kiếm</span>
+            </button>
+        </div>
+
+        <div class="home-search-panel">
+            <div class="home-filter-grid">
+                <div class="home-filter-item">
+                    <label for="type_filter">Loại</label>
+                    <select id="type_filter" name="type_filter" class="home-filter-select">
+                        <option value="">Tất cả</option>
+                        <option value="mua-ban" <?php echo $filterType === 'mua-ban' ? 'selected' : ''; ?>>Mua bán</option>
+                        <option value="cho-thue" <?php echo $filterType === 'cho-thue' ? 'selected' : ''; ?>>Cho thuê</option>
+                    </select>
+                </div>
+
+                <div class="home-filter-item">
+                    <label for="location">Khu vực</label>
+                    <select id="location" name="location" class="home-filter-select">
+                        <option value="">Tất cả khu vực</option>
+                        <?php foreach ($locationOptions as $locationLabel): ?>
+                            <option value="<?php echo htmlspecialchars($locationLabel); ?>" <?php echo $filterLocation === $locationLabel ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($locationLabel); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="home-filter-item">
+                    <label for="price_filter">Giá</label>
+                    <select id="price_filter" name="price_filter" class="home-filter-select">
+                        <option value="">Tất cả mức giá</option>
+                        <option value="duoi-2-ty" <?php echo $filterPrice === 'duoi-2-ty' ? 'selected' : ''; ?>>Dưới 2 tỷ</option>
+                        <option value="2-5-ty" <?php echo $filterPrice === '2-5-ty' ? 'selected' : ''; ?>>2 - 5 tỷ</option>
+                        <option value="5-10-ty" <?php echo $filterPrice === '5-10-ty' ? 'selected' : ''; ?>>5 - 10 tỷ</option>
+                        <option value="tren-10-ty" <?php echo $filterPrice === 'tren-10-ty' ? 'selected' : ''; ?>>Trên 10 tỷ</option>
+                        <option value="duoi-10-trieu" <?php echo $filterPrice === 'duoi-10-trieu' ? 'selected' : ''; ?>>Dưới 10 triệu/tháng</option>
+                        <option value="10-20-trieu" <?php echo $filterPrice === '10-20-trieu' ? 'selected' : ''; ?>>10 - 20 triệu/tháng</option>
+                        <option value="tren-20-trieu" <?php echo $filterPrice === 'tren-20-trieu' ? 'selected' : ''; ?>>Trên 20 triệu/tháng</option>
+                    </select>
+                </div>
+
+                <div class="home-filter-item">
+                    <label for="area_filter">Diện tích</label>
+                    <select id="area_filter" name="area_filter" class="home-filter-select">
+                        <option value="">Tất cả diện tích</option>
+                        <option value="duoi-50" <?php echo $filterArea === 'duoi-50' ? 'selected' : ''; ?>>Dưới 50m²</option>
+                        <option value="50-80" <?php echo $filterArea === '50-80' ? 'selected' : ''; ?>>50 - 80m²</option>
+                        <option value="80-120" <?php echo $filterArea === '80-120' ? 'selected' : ''; ?>>80 - 120m²</option>
+                        <option value="tren-120" <?php echo $filterArea === 'tren-120' ? 'selected' : ''; ?>>Trên 120m²</option>
+                    </select>
+                </div>
+
+                <div class="home-filter-actions">
+                    <button type="submit" class="home-apply-btn">Áp dụng bộ lọc</button>
+                    <a href="index.php" class="home-reset-btn">Đặt lại</a>
+                </div>
+            </div>
+        </div>
+    </form>
 </section>
 
 <!-- NỘI DUNG CHÍNH -->
 <main class="noi-dung">
+
+    <?php if ($hasSearchFilters): ?>
+    <section class="khoi">
+        <h2 class="khoi-tieude">Kết quả tìm kiếm</h2>
+        <p class="search-result-note">Tìm thấy <b><?php echo (int)$searchCount; ?></b> tin phù hợp với bộ lọc của bạn.</p>
+
+        <div class="grid-4">
+            <?php if ($searchResult && mysqli_num_rows($searchResult) > 0): ?>
+                <?php while($item = mysqli_fetch_assoc($searchResult)): ?>
+                    <a href="detail.php?id=<?php echo $item['id']; ?>" style="text-decoration:none; color:inherit;">
+                        <div class="card">
+                            <div class="card-img">
+                                <?php
+                                    $base_img = "../uploads/";
+                                    $thumb = !empty($item['image_url']) ? $base_img . $item['image_url'] : 'https://via.placeholder.com/400x250?text=No+Image';
+                                ?>
+                                <img src="<?php echo $thumb; ?>" alt="<?php echo htmlspecialchars($item['title']); ?>">
+                                <span class="badge <?php echo $item['type'] == 'Cho thuê' ? 'badge-rent' : 'badge-sell'; ?>">
+                                    <?php echo $item['type'] == 'Cho thuê' ? 'THUÊ' : 'CHUYỂN NHƯỢNG'; ?>
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <div class="price">
+                                    <?php
+                                        if($item['price'] >= 1000000000) {
+                                            echo number_format($item['price'] / 1000000000, 1) . " Tỷ";
+                                        } else {
+                                            echo number_format($item['price'] / 1000000, 1) . " Triệu";
+                                        }
+                                    ?>
+                                </div>
+                                <div class="title"><?php echo htmlspecialchars($item['title']); ?></div>
+                                <div class="address">📍 <?php echo ($item['district'] ?? 'N/A') . ", " . ($item['province'] ?? 'TP. HCM'); ?></div>
+                                <div class="meta">
+                                    <span>Diện Tích: <b><?php echo $item['area']; ?></b> m²</span><br>
+                                    <span>Loại Căn Hộ: <b><?php echo $item['bedroom']; ?></b> PN</span>
+                                    <span><b><?php echo $item['bathroom']; ?></b> WC</span>
+                                </div>
+                                <div class="meta-sub">Nội thất: <?php echo $item['furniture']; ?></div>
+                            </div>
+                        </div>
+                    </a>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <div class="empty-search-results">Không tìm thấy tin đăng phù hợp với bộ lọc bạn đã chọn.</div>
+            <?php endif; ?>
+        </div>
+    </section>
+    <?php endif; ?>
 
     <!-- SECTION: Căn hộ mới nhất (grid thường, không slider) -->
     <section class="khoi">
@@ -506,8 +715,9 @@ function toggleGioiThieu() {
 window.onload = function() {
     const loginStatus    = "<?php echo $login_status; ?>";
     const registerStatus = "<?php echo $register_status; ?>";
+    const forceOpenLogin = <?php echo (isset($_GET["admin_login"]) || isset($_GET["open_login"])) ? "true" : "false"; ?>;
 
-    if (loginStatus === "error") {
+    if (forceOpenLogin || loginStatus === "error") {
         openLogin();
         return;
     }

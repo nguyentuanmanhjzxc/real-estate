@@ -30,7 +30,7 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
         <li><a href="index.php">Mua bán</a></li>
         <li><a href="index.php">Cho thuê</a></li>
         <li><a href="my-posts.php">Tin của tôi</a></li>
-        <li><a href="#">Hướng dẫn</a></li>
+        <li><a href="index.php">Trang chủ</a></li>
     </ul>
     <div class="navbar-actions user-area">
                     <?php if (isset($_SESSION['user'])): ?>
@@ -52,9 +52,12 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                         </div>
 
                     <div class="dropdown">
-                        <a href="profile.php"> Trang cá nhân</a>
-                        <a href="my-posts.php"> Tin của tôi</a>
-                        <a href="../modules/auth/logout.php"> Đăng xuất</a>
+                        <a href="profile.php">Trang cá nhân</a>
+                        <a href="my-posts.php">Tin của tôi</a>
+                        <?php if ($roleId === 1): ?>
+                            <a href="../admin/dashboard.php">Quay lại trang admin</a>
+                        <?php endif; ?>
+                        <a href="../modules/auth/logout.php">Đăng xuất</a>
                     </div>
                 </div>
 
@@ -72,11 +75,7 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 <div class="section-head compact-head">
                     <div>
                         <h3>Thiết lập tin đăng</h3>
-                        <p>Chọn đúng loại tin ngay từ đầu để phần nhập liệu phía dưới gọn hơn và dễ duyệt hơn.</p>
-                    </div>
-                    <div class="head-actions compact-actions">
-                        <a href="my-posts.php" class="outline-btn">Xem tin của tôi</a>
-                        <a href="#preview-box" class="dark-btn">Xem bản xem trước</a>
+                        <p>Chọn thông tin cơ bản để bắt đầu đăng tin.</p>
                     </div>
                     <span class="step-badge">01</span>
                 </div>
@@ -101,18 +100,13 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                         </select>
                     </div>
                 </div>
-                <div class="toggle-row" style="margin-top:16px;">
-                    <span class="option-chip active">Form gọn cho web tìm kiếm căn hộ</span>
-                    <span class="option-chip">Không làm nặng kiểu cổng bất động sản tổng hợp</span>
-                    <span class="option-chip">Tập trung mua / thuê</span>
-                </div>
             </section>
 
             <section class="post-section">
                 <div class="section-head">
                     <div>
                         <h3>Thông tin căn hộ</h3>
-                        <p>Nhóm trường thông tin giữ vừa đủ để bài đăng nhìn chuyên nghiệp nhưng vẫn nhanh nhập.</p>
+                        <p>Nhập các thông tin chính của căn hộ.</p>
                     </div>
                     <span class="step-badge">02</span>
                 </div>
@@ -120,8 +114,7 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                     <div class="field full">
                         <label>Tiêu đề tin đăng</label>
                         <input type="text" placeholder="Ví dụ: Căn hộ 2PN full nội thất tại Quận 2, view sông, 72m²" id="preview-title-input">
-                        <div class="field-hint">Nên nêu loại căn hộ + khu vực + điểm nổi bật + diện tích.</div>
-                    </div>
+                                            </div>
                     <div class="field">
                         <label>Dự án / toà nhà</label>
                         <select>
@@ -189,7 +182,7 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 <div class="section-head">
                     <div>
                         <h3>Giá và chi phí</h3>
-                        <p>Với tin cho thuê, nên làm rõ tiền thuê, cọc và phí dịch vụ. Với tin bán, ưu tiên giá tổng và mức thương lượng.</p>
+                        <p>Điền giá bán hoặc giá thuê của căn hộ.</p>
                     </div>
                     <span class="step-badge">03</span>
                 </div>
@@ -220,7 +213,7 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 <div class="section-head">
                     <div>
                         <h3>Hình ảnh căn hộ</h3>
-                        <p>Cho phép chọn nhiều ảnh, xem trước ngay trên form và ưu tiên ảnh đầu tiên làm ảnh bìa.</p>
+                        <p>Chọn ảnh thật của căn hộ để hiển thị trong tin đăng.</p>
                     </div>
                     <span class="step-badge">04</span>
                 </div>
@@ -242,21 +235,6 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                         <div class="upload-note">Hỗ trợ nhiều ảnh • Ảnh đầu tiên sẽ là ảnh bìa • Ưu tiên JPG, PNG, WEBP</div>
                     </label>
 
-                    <div class="upload-helper-grid">
-                        <div class="upload-helper-item">
-                            <strong>Ảnh bìa</strong>
-                            <span>Nên là phòng khách hoặc góc chụp tổng thể sáng rõ.</span>
-                        </div>
-                        <div class="upload-helper-item">
-                            <strong>Ảnh chi tiết</strong>
-                            <span>Thêm phòng ngủ, bếp, nhà vệ sinh, ban công, tiện ích.</span>
-                        </div>
-                        <div class="upload-helper-item">
-                            <strong>Lưu ý duyệt tin</strong>
-                            <span>Không chèn số điện thoại hoặc watermark quá lớn lên ảnh.</span>
-                        </div>
-                    </div>
-
                     <div class="selected-files-bar" id="selected-files-bar">
                         <span id="selected-files-count">Chưa chọn ảnh nào</span>
                         <button type="button" class="clear-images-btn" id="clear-images-btn">Xóa tất cả</button>
@@ -274,7 +252,7 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 <div class="section-head">
                     <div>
                         <h3>Mô tả bài đăng</h3>
-                        <p>Giữ mô tả theo thứ tự rõ ràng để người xem và admin đều dễ kiểm tra.</p>
+                        <p>Viết mô tả ngắn gọn, rõ những điểm nổi bật của căn hộ.</p>
                     </div>
                     <span class="step-badge">05</span>
                 </div>
@@ -282,15 +260,7 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                     <div class="field full">
                         <label>Mô tả chi tiết</label>
                         <textarea placeholder="Gợi ý bố cục: diện tích → số phòng → nội thất → vị trí → tiện ích xung quanh → mức giá → điều kiện liên hệ."></textarea>
-                        <div class="field-hint">Bạn có thể thêm sẵn gợi ý mô tả tự động ở bước sau để người dùng mới đăng tin đỡ bị bí.</div>
-                    </div>
-                </div>
-                <div class="tag-row">
-                    <span class="tag-chip">Gần metro</span>
-                    <span class="tag-chip">Full nội thất</span>
-                    <span class="tag-chip">View sông</span>
-                    <span class="tag-chip">Có hầm xe</span>
-                    <span class="tag-chip">Nhận nhà ngay</span>
+                                            </div>
                 </div>
             </section>
 
@@ -298,7 +268,7 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 <div class="section-head">
                     <div>
                         <h3>Thông tin liên hệ</h3>
-                        <p>Khối này tách riêng để người đăng kiểm tra lại số điện thoại và cách nhận cuộc gọi / tin nhắn.</p>
+                        <p>Nhập thông tin để khách có thể liên hệ với bạn.</p>
                     </div>
                     <span class="step-badge">06</span>
                 </div>
@@ -323,6 +293,10 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                             <option>Chat trên website</option>
                         </select>
                     </div>
+                </div>
+                <div class="form-submit-actions">
+                    <a href="my-posts.php" class="outline-btn">Hoàn tất</a>
+                    <button type="button" class="dark-btn">Gửi duyệt</button>
                 </div>
             </section>
         </form>
@@ -349,31 +323,6 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                             <span id="preview-location-text">Thủ Đức</span>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            <section class="side-card">
-                <h3>Checklist duyệt tin</h3>
-                <ul class="check-list">
-                    <li>Tiêu đề ngắn, rõ khu vực và điểm nổi bật.</li>
-                    <li>Giá nhập khớp với nội dung mô tả.</li>
-                    <li>Ảnh là ảnh thật, không gắn số điện thoại lên hình.</li>
-                    <li>Mỗi tin chỉ tập trung vào một căn hộ cụ thể.</li>
-                    <li>Mô tả có thông tin diện tích, phòng, tiện ích, liên hệ.</li>
-                </ul>
-            </section>
-
-            <section class="side-card">
-                <h3>Đề xuất flow cho web của bạn</h3>
-                <div class="tag-row" style="margin-top:12px;">
-                    <span class="status-chip pending">Người dùng đăng nhập</span>
-                    <span class="status-chip pending">Tạo tin</span>
-                    <span class="status-chip pending">Admin kiểm tra</span>
-                    <span class="status-chip pending">Hiển thị ngoài trang tìm kiếm</span>
-                </div>
-                <div class="head-actions" style="margin-top:16px;">
-                    <a href="my-posts.php" class="soft-btn">Về quản lý tin</a>
-                    <a href="#" class="dark-btn">Nút gửi duyệt</a>
                 </div>
             </section>
         </aside>

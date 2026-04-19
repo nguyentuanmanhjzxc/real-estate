@@ -5,7 +5,7 @@
     </div>
 
     <div class="topbar-actions">
-        <a class="ghost-btn" href="../index.php" target="_blank">Xem website</a>
+        <a class="ghost-btn" href="../public/index.php" target="_blank">Xem website</a>
         <a class="primary-btn" href="logout.php">Đăng xuất</a>
     </div>
 </header>

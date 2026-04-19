@@ -1,9 +1,10 @@
+<?php $admin = current_admin(); ?>
 <aside class="admin-sidebar">
     <div class="brand-block">
         <div class="brand-icon">TA</div>
         <div>
             <div class="brand-name">T.ADMIN</div>
-            <div class="brand-sub">Quản trị hệ thống</div>
+            <div class="brand-sub">Khu quản trị bất động sản</div>
         </div>
     </div>
 
@@ -30,11 +31,11 @@
 
     <div class="sidebar-user">
         <div class="avatar-circle">
-            <?php echo strtoupper(substr($_SESSION['admin']['name'] ?? 'A', 0, 1)); ?>
+            <?php echo strtoupper(substr($admin['name'] ?? 'A', 0, 1)); ?>
         </div>
         <div>
-            <div class="user-name"><?php echo h($_SESSION['admin']['name'] ?? 'Admin'); ?></div>
-            <div class="user-role">Quản lý hệ thống</div>
+            <div class="user-name"><?php echo h($admin['name'] ?? 'Admin'); ?></div>
+            <div class="user-role">Quản trị viên hệ thống</div>
         </div>
     </div>
 </aside>

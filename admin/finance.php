@@ -39,26 +39,19 @@ include(__DIR__ . '/includes/header.php');
 </div>
 
 <section class="panel-card">
-    <div class="panel-head">
+    <div class="panel-head solo">
         <div>
-            <h3>Gợi ý mở rộng nghiệp vụ</h3>
-            <p>Hiện cơ sở dữ liệu chưa có bảng giao dịch hoặc hợp đồng hoàn tất, nên trang này đang tổng hợp theo giá trị tin đăng.</p>
+            <h3>Tóm tắt tài chính theo tin đăng</h3>
+            <p>Dữ liệu bên dưới được tổng hợp trực tiếp từ các tin đang có trên hệ thống.</p>
         </div>
     </div>
 
-    <div class="info-grid">
-        <div class="info-box">
-            <h4>Muốn tính doanh thu thật</h4>
-            <p>Bạn nên bổ sung bảng giao dịch hoặc hợp đồng để lưu số tiền chốt thực tế, phí môi giới, ngày thanh toán và trạng thái.</p>
-        </div>
-        <div class="info-box">
-            <h4>Muốn quản lý hoa hồng</h4>
-            <p>Có thể thêm cột hoa_hong hoặc bảng commissions gắn với từng môi giới, từng tin và từng giao dịch.</p>
-        </div>
-        <div class="info-box">
-            <h4>Muốn theo dõi lịch thu chi</h4>
-            <p>Thêm bảng payments hoặc transactions để tạo dashboard tài chính sát nghiệp vụ hơn.</p>
-        </div>
+    <div class="detail-list">
+        <div class="detail-row"><span>Tổng giá trị tin chuyển nhượng đang hiển thị</span><strong><?php echo h(format_money($totalSaleValue)); ?></strong></div>
+        <div class="detail-row"><span>Tổng giá trị tin cho thuê đang hiển thị</span><strong><?php echo h(format_money($totalRentValue)); ?></strong></div>
+        <div class="detail-row"><span>Giá bán trung bình</span><strong><?php echo h(format_money($avgSaleValue)); ?></strong></div>
+        <div class="detail-row"><span>Giá thuê trung bình</span><strong><?php echo h(format_money($avgRentValue)); ?></strong></div>
+        <div class="detail-row"><span>Số tin VIP hiện có</span><strong><?php echo $vipCount; ?></strong></div>
     </div>
 </section>
 <?php include(__DIR__ . '/includes/footer.php'); ?>

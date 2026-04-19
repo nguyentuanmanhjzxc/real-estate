@@ -55,22 +55,13 @@ include(__DIR__ . '/includes/header.php');
 <section class="panel-card">
     <div class="panel-head">
         <div>
-            <h3>Bố cục quản lý tin đăng mới</h3>
-            <p>Trang này đổi từ kiểu “quản lý căn hộ” sang “quản lý bài đăng”, đúng hơn với flow khách hàng / môi giới tự đăng tin và admin đứng ở vai trò kiểm duyệt, vận hành.</p>
+            <h3>Danh sách bài đăng</h3>
+            <p>Admin có thể xem nhanh thông tin người đăng, loại tin và trạng thái hiển thị.</p>
         </div>
         <div class="panel-actions">
             <span class="status-badge primary">Chuyển nhượng: <?php echo $salePosts; ?></span>
             <span class="status-badge warning">Cho thuê: <?php echo $rentPosts; ?></span>
         </div>
-    </div>
-
-    <div class="filter-row">
-        <span class="table-filter active">Tất cả</span>
-        <span class="table-filter">Khách hàng</span>
-        <span class="table-filter">Môi giới</span>
-        <span class="table-filter">Tin hiển thị</span>
-        <span class="table-filter">Tin ẩn</span>
-        <span class="table-filter">Tin VIP</span>
     </div>
 
     <div class="table-wrap">
@@ -122,7 +113,7 @@ include(__DIR__ . '/includes/header.php');
                         </td>
                         <td>
                             <div class="table-actions">
-                                <a class="mini-btn dark" href="../detail.php?id=<?php echo (int)$row['id']; ?>" target="_blank">Xem</a>
+                                <a class="mini-btn dark" href="../public/detail.php?id=<?php echo (int)$row['id']; ?>" target="_blank">Xem</a>
                                 <button class="mini-btn" type="button"><?php echo ((int)$row['status'] === 1) ? 'Ẩn tin' : 'Bật tin'; ?></button>
                                 <button class="mini-btn" type="button">Sửa</button>
                             </div>

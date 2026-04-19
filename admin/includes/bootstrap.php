@@ -1,5 +1,5 @@
 <?php
-include(__DIR__ . '/../../../config/database.php');
+include(__DIR__ . '/../../config/database.php');
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -25,43 +25,38 @@ function format_money($amount): string
     return number_format($amount, 0, ',', '.') . ' đ';
 }
 
-function is_password_match(string $plainPassword, string $storedHash): bool
+function current_admin(): array
 {
-    $info = password_get_info($storedHash);
-
-    if (!empty($info['algo'])) {
-        return password_verify($plainPassword, $storedHash);
+    if (!empty($_SESSION['user']) && (int) ($_SESSION['user']['role'] ?? 0) === 1) {
+        return $_SESSION['user'];
     }
 
-    return md5($plainPassword) === $storedHash;
-}
-
-function upgrade_legacy_hash(mysqli $conn, int $userId, string $plainPassword, string $storedHash): void
-{
-    $info = password_get_info($storedHash);
-    if (!empty($info['algo'])) {
-        return;
+    if (!empty($_SESSION['admin'])) {
+        return $_SESSION['admin'];
     }
 
-    if (md5($plainPassword) !== $storedHash) {
-        return;
-    }
-
-    $newHash = password_hash($plainPassword, PASSWORD_DEFAULT);
-    $stmt = $conn->prepare('UPDATE users SET password = ? WHERE id = ?');
-    if ($stmt) {
-        $stmt->bind_param('si', $newHash, $userId);
-        $stmt->execute();
-        $stmt->close();
-    }
+    return [];
 }
 
 function require_admin(): void
 {
-    if (empty($_SESSION['admin'])) {
-        header('Location: login.php');
+    $admin = current_admin();
+
+    if (empty($admin)) {
+        $_SESSION['login_status'] = 'error';
+        $_SESSION['login_msg'] = 'Vui lòng đăng nhập bằng tài khoản admin để vào trang quản trị.';
+        header('Location: ../public/index.php?admin_login=1');
         exit();
     }
+
+    $_SESSION['user'] = [
+        'id' => (int) ($admin['id'] ?? 0),
+        'name' => $admin['name'] ?? 'Admin',
+        'email' => $admin['email'] ?? '',
+        'phone' => $admin['phone'] ?? '',
+        'role' => 1,
+        'avatar' => $admin['avatar'] ?? ''
+    ];
 }
 
 function get_single_value(mysqli $conn, string $sql)
