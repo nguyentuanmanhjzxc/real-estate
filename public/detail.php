@@ -55,7 +55,7 @@ if ($hasSearchFilters) {
 
     if ($keyword !== '') {
         $kw = mysqli_real_escape_string($conn, $keyword);
-        $conditions[] = "(post.title LIKE '%{$kw}%' OR COALESCE(post.description, '') LIKE '%{$kw}%' OR COALESCE(post.content, '') LIKE '%{$kw}%' OR COALESCE(projects.name, '') LIKE '%{$kw}%' OR COALESCE(projects.district, '') LIKE '%{$kw}%' OR COALESCE(projects.province, '') LIKE '%{$kw}%')";
+        $conditions[] = "(post.title LIKE '%{$kw}%' OR COALESCE(post.description, '') LIKE '%{$kw}%' OR COALESCE(projects.name, '') LIKE '%{$kw}%' OR COALESCE(projects.district, '') LIKE '%{$kw}%' OR COALESCE(projects.province, '') LIKE '%{$kw}%')";
     }
 
     if ($filterLocation !== '') {
@@ -393,7 +393,7 @@ $emptyMessage = 'Chưa có tin đăng tương tự để hiển thị.';
     <!-- 🔽 ĐOẠN VĂN (CHẮC CHẮN HIỆN) -->
     <div style="margin-bottom:12px; font-size:14px; line-height:1.6;">
         <?php
-            $desc = $item['description'] ?? $item['content'] ?? '';
+            $desc = $item['description'] ?? '';
 
             if (!empty($desc)) {
                 echo nl2br(htmlspecialchars($desc));

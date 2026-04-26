@@ -46,7 +46,7 @@ if ($hasSearchFilters) {
 
     if ($keyword !== '') {
         $kw = mysqli_real_escape_string($conn, $keyword);
-        $conditions[] = "(post.title LIKE '%{$kw}%' OR COALESCE(post.description, '') LIKE '%{$kw}%' OR COALESCE(post.content, '') LIKE '%{$kw}%' OR COALESCE(projects.name, '') LIKE '%{$kw}%' OR COALESCE(projects.district, '') LIKE '%{$kw}%' OR COALESCE(projects.province, '') LIKE '%{$kw}%')";
+        $conditions[] = "(post.title LIKE '%{$kw}%' OR COALESCE(post.description, '') LIKE '%{$kw}%' OR COALESCE(projects.name, '') LIKE '%{$kw}%' OR COALESCE(projects.district, '') LIKE '%{$kw}%' OR COALESCE(projects.province, '') LIKE '%{$kw}%')";
     }
 
     if ($filterLocation !== '') {
@@ -257,8 +257,9 @@ $result_thue = mysqli_query($conn, $sql_thue);
 <nav class="navbar">
     <div class="navbar-logo"><span>The</span>Apartment</div>
     <ul class="navbar-menu">
-        <li><a href="#">Mua bán</a></li>
-        <li><a href="#">Cho thuê</a></li>
+        <li><a href="listings.php?type_filter=mua-ban">Mua bán</a></li>
+        <li><a href="listings.php?type_filter=cho-thue">Cho thuê</a></li>
+        <li><a href="listings.php">Danh sách căn hộ</a></li>
         <?php if (isset($_SESSION['user'])): ?>
             <li><a href="my-posts.php">Tin của tôi</a></li>
         <?php endif; ?>
@@ -428,7 +429,10 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
     <!-- SECTION: Căn hộ mới nhất (grid thường, không slider) -->
     <section class="khoi">
-        <h2 class="khoi-tieude">Căn hộ mới nhất</h2>
+        <div class="khoi-header">
+            <h2 class="khoi-tieude">Căn hộ mới nhất</h2>
+            <a href="listings.php?sort=newest" class="xem-tat-ca-link">Xem tất cả →</a>
+        </div>
         <div class="grid-4">
             <?php while($item = mysqli_fetch_assoc($result)): ?>
                 <a href="detail.php?id=<?php echo $item['id']; ?>" style="text-decoration:none; color:inherit;">
@@ -470,7 +474,10 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
     <!-- SECTION: Tin chuyển nhượng (SLIDER) -->
     <section class="khoi">
-        <h2 class="khoi-tieude">Tin chuyển nhượng mới đăng</h2>
+        <div class="khoi-header">
+            <h2 class="khoi-tieude">Tin chuyển nhượng mới đăng</h2>
+            <a href="listings.php?type_filter=mua-ban&sort=newest" class="xem-tat-ca-link">Xem tất cả →</a>
+        </div>
         <div class="slider-wrapper">
             <button class="slider-btn left" onclick="scrollSlider('ban', -1)">❮</button>
 
@@ -517,7 +524,10 @@ $result_thue = mysqli_query($conn, $sql_thue);
 
     <!-- SECTION: Tin cho thuê (SLIDER) -->
     <section class="khoi">
-        <h2 class="khoi-tieude">Tin cho thuê mới đăng</h2>
+        <div class="khoi-header">
+            <h2 class="khoi-tieude">Tin cho thuê mới đăng</h2>
+            <a href="listings.php?type_filter=cho-thue&sort=newest" class="xem-tat-ca-link">Xem tất cả →</a>
+        </div>
         <div class="slider-wrapper">
             <button class="slider-btn left" onclick="scrollSlider('thue', -1)">❮</button>
 

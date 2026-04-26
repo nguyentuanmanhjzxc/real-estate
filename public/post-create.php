@@ -70,7 +70,7 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
 
 <div class="page-shell compact-post-page">
     <div class="posting-layout">
-        <form class="post-form" action="#" method="post" enctype="multipart/form-data">
+        <form class="post-form" action="create-post-action.php" method="post" enctype="multipart/form-data">
             <section class="post-section">
                 <div class="section-head compact-head">
                     <div>
@@ -82,9 +82,9 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 <div class="form-grid three">
                     <div class="field">
                         <label>Mục đích</label>
-                        <select>
-                            <option>Chuyển nhượng căn hộ</option>
-                            <option>Cho thuê căn hộ</option>
+                        <select name="type">
+                            <option value="Chuyển nhượng căn hộ">Chuyển nhượng căn hộ</option>
+                            <option value="Cho thuê căn hộ">Cho thuê căn hộ</option>
                         </select>
                     </div>
                     <div class="field">
@@ -93,10 +93,10 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                     </div>
                     <div class="field">
                         <label>Gói hiển thị</label>
-                        <select>
-                            <option>Tin thường</option>
-                            <option>Tin nổi bật</option>
-                            <option>Tin ưu tiên</option>
+                        <select name="package">
+                            <option value="normal">Tin thường</option>
+                            <option value="featured">Tin nổi bật</option>
+                            <option value="premium">Tin ưu tiên</option>
                         </select>
                     </div>
                 </div>
@@ -112,16 +112,16 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 </div>
                 <div class="form-grid">
                     <div class="field full">
-                        <label>Tiêu đề tin đăng</label>
-                        <input type="text" placeholder="Ví dụ: Căn hộ 2PN full nội thất tại Quận 2, view sông, 72m²" id="preview-title-input">
+                        <label>Tiêu đề tin đăng *</label>
+                        <input type="text" name="title" placeholder="Ví dụ: Căn hộ 2PN full nội thất tại Quận 2, view sông, 72m²" id="preview-title-input" required>
                                             </div>
                     <div class="field">
                         <label>Dự án / toà nhà</label>
-                        <select>
-                            <option>Chọn dự án</option>
+                        <select name="project_id">
+                            <option value="0">Chọn dự án</option>
                             <?php if ($projects && mysqli_num_rows($projects) > 0): ?>
                                 <?php while ($project = mysqli_fetch_assoc($projects)): ?>
-                                    <option><?php echo htmlspecialchars($project['name'] . ' - ' . ($project['district'] ?? '') . ', ' . ($project['province'] ?? '')); ?></option>
+                                    <option value="<?php echo $project['id']; ?>"><?php echo htmlspecialchars($project['name'] . ' - ' . ($project['district'] ?? '') . ', ' . ($project['province'] ?? '')); ?></option>
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <option>Dữ liệu dự án sẽ hiển thị ở đây</option>
@@ -130,49 +130,49 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                     </div>
                     <div class="field">
                         <label>Khu vực hiển thị</label>
-                        <input type="text" placeholder="Ví dụ: Bình Thạnh, TP.HCM" id="preview-location-input">
+                        <input type="text" name="location" placeholder="Ví dụ: Bình Thạnh, TP.HCM" id="preview-location-input">
                     </div>
                     <div class="field">
-                        <label>Diện tích</label>
-                        <input type="number" placeholder="m²" id="preview-area-input">
+                        <label>Diện tích *</label>
+                        <input type="number" name="area" placeholder="m²" id="preview-area-input" step="0.1" min="0" required>
                     </div>
                     <div class="field">
                         <label>Phòng ngủ</label>
-                        <select id="preview-bedroom-input">
-                            <option>1 phòng ngủ</option>
-                            <option selected>2 phòng ngủ</option>
-                            <option>3 phòng ngủ</option>
-                            <option>4+ phòng ngủ</option>
+                        <select name="bedroom" id="preview-bedroom-input">
+                            <option value="1 phòng ngủ">1 phòng ngủ</option>
+                            <option value="2 phòng ngủ" selected>2 phòng ngủ</option>
+                            <option value="3 phòng ngủ">3 phòng ngủ</option>
+                            <option value="4+ phòng ngủ">4+ phòng ngủ</option>
                         </select>
                     </div>
                     <div class="field">
                         <label>Phòng tắm</label>
-                        <select id="preview-bathroom-input">
-                            <option>1 phòng tắm</option>
-                            <option selected>2 phòng tắm</option>
-                            <option>3 phòng tắm</option>
+                        <select name="bathroom" id="preview-bathroom-input">
+                            <option value="1 phòng tắm">1 phòng tắm</option>
+                            <option value="2 phòng tắm" selected>2 phòng tắm</option>
+                            <option value="3 phòng tắm">3 phòng tắm</option>
                         </select>
                     </div>
                     <div class="field">
                         <label>Tầng</label>
-                        <input type="text" placeholder="Ví dụ: Tầng 12">
+                        <input type="text" name="floor" placeholder="Ví dụ: Tầng 12">
                     </div>
                     <div class="field">
                         <label>Hướng ban công / cửa chính</label>
-                        <select>
-                            <option>Đông Nam</option>
-                            <option>Tây Nam</option>
-                            <option>Đông Bắc</option>
-                            <option>Tây Bắc</option>
-                            <option>Không xác định</option>
+                        <select name="direction">
+                            <option value="Đông Nam">Đông Nam</option>
+                            <option value="Tây Nam">Tây Nam</option>
+                            <option value="Đông Bắc">Đông Bắc</option>
+                            <option value="Tây Bắc">Tây Bắc</option>
+                            <option value="">Không xác định</option>
                         </select>
                     </div>
                     <div class="field">
                         <label>Tình trạng nội thất</label>
-                        <select>
-                            <option>Full nội thất</option>
-                            <option>Nội thất cơ bản</option>
-                            <option>Nhà trống</option>
+                        <select name="furniture">
+                            <option value="Full nội thất">Full nội thất</option>
+                            <option value="Nội thất cơ bản">Nội thất cơ bản</option>
+                            <option value="Nhà trống">Nhà trống</option>
                         </select>
                     </div>
                 </div>
@@ -188,23 +188,23 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 </div>
                 <div class="form-grid">
                     <div class="field">
-                        <label>Giá chính</label>
-                        <input type="number" placeholder="Nhập giá bằng VNĐ" id="preview-price-input">
+                        <label>Giá chính *</label>
+                        <input type="number" name="price" placeholder="Nhập giá bằng VNĐ" id="preview-price-input" required>
                     </div>
                     <div class="field">
                         <label>Đơn vị</label>
-                        <select>
-                            <option>Tổng giá bán</option>
-                            <option>Giá thuê / tháng</option>
+                        <select name="price_unit">
+                            <option value="total">Tổng giá bán</option>
+                            <option value="monthly">Giá thuê / tháng</option>
                         </select>
                     </div>
                     <div class="field">
                         <label>Tiền cọc</label>
-                        <input type="text" placeholder="Ví dụ: 2 tháng tiền thuê">
+                        <input type="text" name="deposit" placeholder="Ví dụ: 2 tháng tiền thuê">
                     </div>
                     <div class="field">
                         <label>Phí quản lý / phí khác</label>
-                        <input type="text" placeholder="Ví dụ: 15.000đ/m², phí xe riêng">
+                        <input type="text" name="management_fee" placeholder="Ví dụ: 15.000đ/m², phí xe riêng">
                     </div>
                 </div>
             </section>
@@ -259,8 +259,8 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 <div class="form-grid one">
                     <div class="field full">
                         <label>Mô tả chi tiết</label>
-                        <textarea placeholder="Gợi ý bố cục: diện tích → số phòng → nội thất → vị trí → tiện ích xung quanh → mức giá → điều kiện liên hệ."></textarea>
-                                            </div>
+                        <textarea name="description" rows="6" placeholder="Gợi ý bố cục: diện tích → số phòng → nội thất → vị trí → tiện ích xung quanh → mức giá → điều kiện liên hệ."></textarea>
+                    </div>
                 </div>
             </section>
 
@@ -275,28 +275,28 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                 <div class="form-grid">
                     <div class="field">
                         <label>Tên người liên hệ</label>
-                        <input type="text" value="<?php echo htmlspecialchars($user['name']); ?>">
+                        <input type="text" name="contact_name" value="<?php echo htmlspecialchars($user['name']); ?>">
                     </div>
                     <div class="field">
-                        <label>Số điện thoại</label>
-                        <input type="text" placeholder="Nhập số điện thoại nhận liên hệ">
+                        <label>Số điện thoại *</label>
+                        <input type="text" name="contact_phone" placeholder="Nhập số điện thoại nhận liên hệ" required>
                     </div>
                     <div class="field">
                         <label>Email</label>
-                        <input type="email" placeholder="Nhập email nhận khách quan tâm">
+                        <input type="email" name="contact_email" placeholder="Nhập email nhận khách quan tâm">
                     </div>
                     <div class="field">
                         <label>Ưu tiên liên hệ</label>
-                        <select>
-                            <option>Gọi điện</option>
-                            <option>Zalo</option>
-                            <option>Chat trên website</option>
+                        <select name="contact_method">
+                            <option value="call">Gọi điện</option>
+                            <option value="zalo">Zalo</option>
+                            <option value="chat">Chat trên website</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-submit-actions">
-                    <a href="my-posts.php" class="outline-btn">Hoàn tất</a>
-                    <button type="button" class="dark-btn">Gửi duyệt</button>
+                    <a href="my-posts.php" class="outline-btn">Hủy</a>
+                    <button type="submit" class="dark-btn">Đăng tin ngay</button>
                 </div>
             </section>
         </form>
