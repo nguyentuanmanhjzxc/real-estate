@@ -18,8 +18,14 @@
         <a class="nav-item <?php echo is_active_menu('requests', $activeMenu ?? ''); ?>" href="requests.php">
             <span>Yêu cầu liên hệ</span>
         </a>
+        <a class="nav-item <?php echo is_active_menu('projects', $activeMenu ?? ''); ?>" href="projects.php">
+            <span>Quản lý dự án</span>
+        </a>
         <a class="nav-item <?php echo is_active_menu('customers', $activeMenu ?? ''); ?>" href="customers.php">
             <span>Khách hàng</span>
+        </a>
+        <a class="nav-item <?php echo is_active_menu('images', $activeMenu ?? ''); ?>" href="images.php">
+            <span>Quản lý hình ảnh</span>
         </a>
         <a class="nav-item <?php echo is_active_menu('finance', $activeMenu ?? ''); ?>" href="finance.php">
             <span>Tài chính</span>

@@ -1,14 +1,22 @@
 <?php
 require_once(__DIR__ . '/includes/bootstrap.php');
 require_admin();
+ 
+global $conn;
 
 $pageTitle = 'Khách hàng';
 $activeMenu = 'customers';
 $pageHeading = 'Khách hàng';
 $pageDescription = 'Theo dõi tài khoản đã đăng ký trong hệ thống.';
 
+// Get success/error messages
+$adminSuccess = $_SESSION['admin_success'] ?? '';
+$adminError = $_SESSION['admin_error'] ?? '';
+unset($_SESSION['admin_success'], $_SESSION['admin_error']);
+
 $customers = mysqli_query($conn, "
-    SELECT u.id, u.name, u.email, u.phone, u.created_at, r.name AS role_name
+    SELECT u.id, u.name, u.email, u.phone, u.created_at, 
+           1 AS is_active, r.name AS role_name
     FROM users u
     LEFT JOIN roles r ON u.role_id = r.id
     WHERE u.role_id <> 1 OR u.role_id IS NULL
@@ -16,7 +24,23 @@ $customers = mysqli_query($conn, "
 ");
 
 include(__DIR__ . '/includes/header.php');
+
+// Alert box for success/error
+function adminAlert($type, $message) {
+    $bg = $type === 'success' ? '#d1fae5' : '#fee2e2';
+    $color = $type === 'success' ? '#065f46' : '#991b1b';
+    $border = $type === 'success' ? '#a7f3d0' : '#fecaca';
+    echo "<div style='background:{$bg};color:{$color};border:1px solid {$border};padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;'>".h($message)."</div>";
+}
 ?>
+
+<?php if ($adminSuccess): ?>
+    <?php adminAlert('success', $adminSuccess); ?>
+<?php endif; ?>
+<?php if ($adminError): ?>
+    <?php adminAlert('error', $adminError); ?>
+<?php endif; ?>
+
 <div class="stats-grid three">
     <article class="stat-card">
         <div class="stat-label">Tài khoản môi giới</div>
@@ -52,7 +76,8 @@ include(__DIR__ . '/includes/header.php');
                     <th>Email</th>
                     <th>Số điện thoại</th>
                     <th>Vai trò</th>
-                    <th>Ngày tạo</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,7 +89,17 @@ include(__DIR__ . '/includes/header.php');
                         <td><?php echo h($row['email'] ?: 'Chưa có email'); ?></td>
                         <td><?php echo h($row['phone'] ?: 'Chưa có số điện thoại'); ?></td>
                         <td><span class="status-badge neutral"><?php echo h($row['role_name'] ?: 'Chưa phân quyền'); ?></span></td>
-                        <td><?php echo h(date('d/m/Y H:i', strtotime($row['created_at']))); ?></td>
+                        <td>
+                            <span class="status-badge <?php echo ((int)($row['is_active'] ?? 1) === 1) ? 'success' : 'warning'; ?>">
+                                <?php echo ((int)($row['is_active'] ?? 1) === 1) ? 'Hoạt động' : 'Bị khóa'; ?>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="table-actions">
+                                <a class="mini-btn" href="user-action.php?action=toggle_status&user_id=<?php echo (int)$row['id']; ?>" onclick="return confirm('Xác nhận ' + (<?php echo (int)($row['is_active'] ?? 1) === 1 ? "'khóa'" : "'mở khóa'"; ?>) + ' tài khoản này?')"><?php echo ((int)($row['is_active'] ?? 1) === 1) ? 'Khóa' : 'Mở khóa'; ?></a>
+                                <a class="mini-btn" href="user-action.php?action=delete&user_id=<?php echo (int)$row['id']; ?>" style="background:#dc2626;color:white;" onclick="return confirm('Xác nhận xóa tài khoản này? Tất cả bài đăng của người dùng cũng sẽ bị xóa.')">Xóa</a>
+                            </div>
+                        </td>
                     </tr>
                 <?php endwhile; ?>
             <?php else: ?>

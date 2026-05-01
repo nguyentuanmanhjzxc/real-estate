@@ -7,6 +7,11 @@ $activeMenu = 'posts';
 $pageHeading = 'Quản lý tin đăng';
 $pageDescription = 'Admin theo dõi toàn bộ bài đăng của khách hàng và môi giới tại đây.';
 
+// Get success/error messages
+$adminSuccess = $_SESSION['admin_success'] ?? '';
+$adminError = $_SESSION['admin_error'] ?? '';
+unset($_SESSION['admin_success'], $_SESSION['admin_error']);
+
 $posts = mysqli_query($conn, "
     SELECT p.id, p.title, p.price, p.area, p.type, p.status, p.is_vip, p.created_at,
            p.bedroom, p.bathroom,
@@ -28,7 +33,23 @@ $salePosts = (int) get_single_value($conn, "SELECT COUNT(*) FROM post WHERE type
 $vipPosts = (int) get_single_value($conn, 'SELECT COUNT(*) FROM post WHERE is_vip = 1');
 
 include(__DIR__ . '/includes/header.php');
+
+// Alert box for success/error
+function adminAlert($type, $message) {
+    $bg = $type === 'success' ? '#d1fae5' : '#fee2e2';
+    $color = $type === 'success' ? '#065f46' : '#991b1b';
+    $border = $type === 'success' ? '#a7f3d0' : '#fecaca';
+    echo "<div style='background:{$bg};color:{$color};border:1px solid {$border};padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;'>".h($message)."</div>";
+}
 ?>
+
+<?php if ($adminSuccess): ?>
+    <?php adminAlert('success', $adminSuccess); ?>
+<?php endif; ?>
+<?php if ($adminError): ?>
+    <?php adminAlert('error', $adminError); ?>
+<?php endif; ?>
+
 <div class="stats-grid four">
     <article class="stat-card">
         <div class="stat-label">Tổng bài đăng</div>
@@ -114,8 +135,12 @@ include(__DIR__ . '/includes/header.php');
                         <td>
                             <div class="table-actions">
                                 <a class="mini-btn dark" href="../public/detail.php?id=<?php echo (int)$row['id']; ?>" target="_blank">Xem</a>
-                                <button class="mini-btn" type="button"><?php echo ((int)$row['status'] === 1) ? 'Ẩn tin' : 'Bật tin'; ?></button>
-                                <button class="mini-btn" type="button">Sửa</button>
+                                <a class="mini-btn" href="post-action.php?action=toggle_status&post_id=<?php echo (int)$row['id']; ?>" onclick="return confirm('Xác nhận <?php echo (int)$row['status'] === 1 ? 'ẩn' : 'bật'; ?> tin đăng này?')"><?php echo ((int)$row['status'] === 1) ? 'Ẩn tin' : 'Bật tin'; ?></a>
+                                <?php if ((int)$row['status'] !== 1): ?>
+                                    <a class="mini-btn" href="post-action.php?action=approve&post_id=<?php echo (int)$row['id']; ?>" style="background:#10b981;color:white;">Duyệt</a>
+                                <?php endif; ?>
+                                <a class="mini-btn" href="post-action.php?action=reject&post_id=<?php echo (int)$row['id']; ?>" style="background:#f59e0b;color:white;" onclick="return confirm('Xác nhận từ chối tin đăng này?')">Từ chối</a>
+                                <a class="mini-btn" href="post-action.php?action=delete&post_id=<?php echo (int)$row['id']; ?>" style="background:#dc2626;color:white;" onclick="return confirm('Xác nhận xóa tin đăng này? Hành động này không thể hoàn tác.')">Xóa</a>
                             </div>
                         </td>
                     </tr>
