@@ -1,6 +1,7 @@
 <?php
 session_start();
 include("../config/database.php");
+require_once(__DIR__ . "/../includes/post-helpers.php");
 $ten_trang = "TheApartment";
 $isAdmin = !empty($_SESSION['user']) && (int)($_SESSION['user']['role'] ?? 0) === 1;
 $nam_hien_tai = date("Y");
@@ -26,21 +27,60 @@ if ($locationQuery) {
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($id <= 0) { header("Location: index.php"); exit; }
 
-// Lấy thông tin bài đăng
-$sql = "SELECT post.*, projects.province, projects.district, projects.name AS project_name
+// Lấy thông tin bài đăng. Chủ tin và admin vẫn xem được tin đang ẩn để kiểm tra lại.
+$currentUserId = (int)($_SESSION['user']['id'] ?? 0);
+$sql = "SELECT post.*, projects.province, projects.district, projects.name AS project_name,
+               users.name AS owner_name, users.phone AS owner_phone, users.email AS owner_email
         FROM post
         LEFT JOIN projects ON post.project_id = projects.id
-        WHERE post.id = $id AND post.status = 1
-        LIMIT 1";
-$result = mysqli_query($conn, $sql);
-$item = mysqli_fetch_assoc($result);
+        LEFT JOIN users ON post.user_id = users.id
+        WHERE post.id = ?";
+$params = [$id];
+$types = 'i';
+if (!$isAdmin) {
+    if ($currentUserId > 0) {
+        $sql .= " AND (post.status = 1 OR post.user_id = ?)";
+        $params[] = $currentUserId;
+        $types .= 'i';
+    } else {
+        $sql .= " AND post.status = 1";
+    }
+}
+$sql .= " LIMIT 1";
+$stmt = $conn->prepare($sql);
+if (!$stmt) { header("Location: index.php"); exit; }
+stmt_bind_params($stmt, $types, $params);
+$stmt->execute();
+$result = $stmt->get_result();
+$item = $result ? $result->fetch_assoc() : null;
+$stmt->close();
 if (!$item) { header("Location: index.php"); exit; }
 
+$displayLocation = trim((string)($item['location'] ?? ''));
+if ($displayLocation === '') {
+    $displayLocation = trim(($item['district'] ?? '') . ((!empty($item['district']) && !empty($item['province'])) ? ', ' : '') . ($item['province'] ?? ''));
+}
+if ($displayLocation === '') {
+    $displayLocation = 'TP. Hồ Chí Minh';
+}
+
+$contactName = trim((string)($item['contact_name'] ?? $item['owner_name'] ?? 'Người đăng tin'));
+if ($contactName === '') {
+    $contactName = 'Người đăng tin';
+}
+$contactPhone = trim((string)($item['contact_phone'] ?? $item['owner_phone'] ?? ''));
+$contactEmail = trim((string)($item['contact_email'] ?? $item['owner_email'] ?? ''));
+
 // Lấy tất cả ảnh
-$sql_imgs = "SELECT image_url, is_thumbnail FROM images WHERE post_id = $id ORDER BY is_thumbnail DESC";
-$result_imgs = mysqli_query($conn, $sql_imgs);
+$stmtImgs = $conn->prepare("SELECT image_url, is_thumbnail FROM images WHERE post_id = ? ORDER BY is_thumbnail DESC, id ASC");
 $images = [];
-while ($img = mysqli_fetch_assoc($result_imgs)) { $images[] = $img; }
+if ($stmtImgs) {
+    $stmtImgs->bind_param('i', $id);
+    $stmtImgs->execute();
+    $result_imgs = $stmtImgs->get_result();
+    while ($img = $result_imgs->fetch_assoc()) { $images[] = $img; }
+    $stmtImgs->close();
+}
 if (empty($images)) { $images[] = ['image_url' => '', 'is_thumbnail' => 1]; }
 
 $searchResult = null;
@@ -347,7 +387,7 @@ $emptyMessage = 'Chưa có tin đăng tương tự để hiển thị.';
                 <?php echo $item['type'] == 'Cho thuê' ? '🏠 CHO THUÊ' : '🔑 CHUYỂN NHƯỢNG'; ?>
             </div>
             <h1 class="info-title"><?php echo htmlspecialchars($item['title']); ?></h1>
-            <div class="info-addr">📍 <?php echo htmlspecialchars(($item['district'] ?? 'N/A') . ', ' . ($item['province'] ?? 'TP. Hồ Chí Minh')); ?></div>
+            <div class="info-addr">📍 <?php echo htmlspecialchars($displayLocation); ?></div>
 
             <div class="price-row">
                 <div>
@@ -414,7 +454,7 @@ $emptyMessage = 'Chưa có tin đăng tương tự để hiển thị.';
         <div><span>Hướng nhà</span><b><?php echo $item['direction'] ?? 'N/A'; ?></b></div>
         <div><span>Tầng</span><b><?php echo $item['floor'] ?? 'N/A'; ?></b></div>
         <div><span>Dự án</span><b><?php echo $item['project_name'] ?? 'N/A'; ?></b></div>
-        <div><span>Khu vực</span><b><?php echo $item['district'] . ', ' . $item['province']; ?></b></div>
+        <div><span>Khu vực</span><b><?php echo htmlspecialchars($displayLocation); ?></b></div>
     </div>
 </div>
 
@@ -462,7 +502,7 @@ $emptyMessage = 'Chưa có tin đăng tương tự để hiển thị.';
         <div class="card-block">
             <div class="block-title">Xem vị trí căn hộ ở trên bản đồ</div>
             <div class="map-frame">
-                <?php $mq = urlencode(($item['district'] ?? '') . ' ' . ($item['province'] ?? 'TP. Ho Chi Minh') . ' Vietnam'); ?>
+                <?php $mq = urlencode($displayLocation . ' Vietnam'); ?>
                 <iframe src="https://maps.google.com/maps?q=<?php echo $mq; ?>&output=embed" allowfullscreen loading="lazy"></iframe>
             </div>
         </div>
@@ -475,15 +515,15 @@ $emptyMessage = 'Chưa có tin đăng tương tự để hiển thị.';
         <div class="s-card">
             <div class="block-title" style="margin-bottom:14px">Liên hệ tư vấn</div>
             <div class="contact-head">
-                <div class="c-avatar"><?php echo strtoupper(mb_substr($item['contact_name'] ?? 'M', 0, 1)); ?></div>
+                <div class="c-avatar"><?php echo strtoupper(mb_substr($contactName, 0, 1)); ?></div>
                 <div>
-                    <div class="c-name"><?php echo htmlspecialchars($item['contact_name'] ?? 'Nguyễn Tuấn Mạnh'); ?></div>
+                    <div class="c-name"><?php echo htmlspecialchars($contactName); ?></div>
                     <div class="c-role">✅ Môi giới</div>
                     <div class="c-stars">⭐ 5.0 · 12 đánh giá</div>
                 </div>
             </div>
             <button class="btn-cta primary" onclick="return requireLogin()">
-            <?php echo htmlspecialchars($item['contact_phone'] ?? 'Xem số điện thoại'); ?>
+            <?php echo isset($_SESSION['user']) ? htmlspecialchars($contactPhone !== '' ? $contactPhone : 'Chưa cập nhật số điện thoại') : 'Đăng nhập để xem số điện thoại'; ?>
             </button>
             <button class="btn-cta ghost" onclick="return requireLogin()">✉️ Nhắn tin</button>
         </div>
@@ -592,7 +632,7 @@ $emptyMessage = 'Chưa có tin đăng tương tự để hiển thị.';
     <div class="footer-grid">
         <div><h4><?php echo $ten_trang; ?></h4><p class="footer-desc"><?php echo $ten_trang; ?> là nền tảng chuyên đăng tin và tìm kiếm căn hộ, hỗ trợ kết nối nhu cầu cho thuê và chuyển nhượng nhanh chóng.</p></div>
         <div><h4>Liên kết nhanh</h4><ul><li><a href="index.php">Trang chủ</a></li><li><a href="#">Căn hộ mới</a></li><li><a href="#">Cho thuê</a></li><li><a href="#">Chuyển nhượng</a></li></ul></div>
-        <div><h4>Hỗ trợ</h4><ul><li><a href="#">Đăng tin</a></li><li><a href="#">Hướng dẫn sử dụng</a></li><li><a href="#">Chính sách bảo mật</a></li><li><a href="#">Điều khoản sử dụng</a></li></ul></div>
+        <div><h4>Hỗ trợ</h4><ul><li><a href="post-create.php">Đăng tin</a></li><li><a href="#">Hướng dẫn sử dụng</a></li><li><a href="#">Chính sách bảo mật</a></li><li><a href="#">Điều khoản sử dụng</a></li></ul></div>
         <div><h4>Liên hệ</h4><ul><li>📍 TP. Hồ Chí Minh</li><li>📞 0901 234 567</li><li>📧 contact@theapartment.vn</li></ul></div>
     </div>
     <div class="footer-bottom"><p>&copy; <?php echo $nam_hien_tai; ?> <b><?php echo $ten_trang; ?></b>. All rights reserved.</p></div>

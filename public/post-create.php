@@ -1,6 +1,7 @@
 <?php
 session_start();
 include(__DIR__ . '/../config/database.php');
+require_once(__DIR__ . '/../includes/post-helpers.php');
 
 if (empty($_SESSION['user'])) {
     header('Location: index.php');
@@ -12,6 +13,9 @@ $user = $_SESSION['user'];
 $roleId = (int)($user['role'] ?? 0);
 
 $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projects ORDER BY name ASC LIMIT 100");
+$success = $_SESSION['success'] ?? '';
+$error = $_SESSION['error'] ?? '';
+unset($_SESSION['success'], $_SESSION['error']);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -69,6 +73,12 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
 </nav>
 
 <div class="page-shell compact-post-page">
+    <?php if ($success): ?>
+        <div class="alert success"><?php echo $success; ?></div>
+    <?php endif; ?>
+    <?php if ($error): ?>
+        <div class="alert error"><?php echo $error; ?></div>
+    <?php endif; ?>
     <div class="posting-layout">
         <form class="post-form" action="create-post-action.php" method="post" enctype="multipart/form-data">
             <section class="post-section">
@@ -170,9 +180,9 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                     <div class="field">
                         <label>Tình trạng nội thất</label>
                         <select name="furniture">
-                            <option value="Full nội thất">Full nội thất</option>
-                            <option value="Nội thất cơ bản">Nội thất cơ bản</option>
-                            <option value="Nhà trống">Nhà trống</option>
+                            <option value="Đầy đủ">Đầy đủ nội thất</option>
+                            <option value="Cơ bản">Nội thất cơ bản</option>
+                            <option value="Trống">Nhà trống</option>
                         </select>
                     </div>
                 </div>
@@ -279,11 +289,11 @@ $projects = mysqli_query($conn, "SELECT id, name, district, province FROM projec
                     </div>
                     <div class="field">
                         <label>Số điện thoại *</label>
-                        <input type="text" name="contact_phone" placeholder="Nhập số điện thoại nhận liên hệ" required>
+                        <input type="text" name="contact_phone" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>" placeholder="Nhập số điện thoại nhận liên hệ" required>
                     </div>
                     <div class="field">
                         <label>Email</label>
-                        <input type="email" name="contact_email" placeholder="Nhập email nhận khách quan tâm">
+                        <input type="email" name="contact_email" value="<?php echo htmlspecialchars($user['email'] ?? ''); ?>" placeholder="Nhập email nhận khách quan tâm">
                     </div>
                     <div class="field">
                         <label>Ưu tiên liên hệ</label>

@@ -1,6 +1,7 @@
 <?php
 session_start();
 include(__DIR__ . '/../config/database.php');
+require_once(__DIR__ . '/../includes/post-helpers.php');
 
 // Pagination settings
 $items_per_page = 10;
@@ -45,11 +46,13 @@ switch ($filterTab) {
 $whereClause = implode(' AND ', $filterConditions);
 
 // Get total count
-$totalPosts = (int)mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM post WHERE {$whereClause}"))[0];
+$totalPosts = (int)mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM post p WHERE {$whereClause}"))[0];
 $totalPages = ceil($totalPosts / $items_per_page);
 
-// Get posts with pagination using prepared statement
-$sql = "SELECT p.id, p.title, p.price, p.area, p.type, p.status, p.created_at, p.updated_at, p.bedroom, p.bathroom, p.furniture,
+// Get posts with pagination using prepared statement.
+// Database hiện tại không có cột updated_at, nên dùng created_at làm thời gian cập nhật dự phòng.
+$updatedAtSelect = post_table_has_column($conn, 'post', 'updated_at') ? 'p.updated_at' : 'p.created_at';
+$sql = "SELECT p.id, p.title, p.price, p.area, p.type, p.status, p.created_at, {$updatedAtSelect} AS updated_at, p.bedroom, p.bathroom, p.furniture,
            pr.name AS project_name, pr.district, pr.province,
            img.image_url
     FROM post p
@@ -315,10 +318,10 @@ function format_money_local($amount): string {
     </div>
 
     <?php if ($success): ?>
-        <div class="alert success"><?php echo htmlspecialchars($success); ?></div>
+        <div class="alert success"><?php echo $success; ?></div>
     <?php endif; ?>
     <?php if ($error): ?>
-        <div class="alert error"><?php echo htmlspecialchars($error); ?></div>
+        <div class="alert error"><?php echo $error; ?></div>
     <?php endif; ?>
 
     <div class="mini-stats">
@@ -353,7 +356,7 @@ function format_money_local($amount): string {
                 <?php
                     $img = !empty($row['image_url']) ? '../uploads/' . $row['image_url'] : '';
                     $thumbStyle = !empty($img)
-                        ? "background-image: linear-gradient(rgba(17,24,39,.14), rgba(17,24,39,.18)), url('" . htmlspecialchars($row['image_url'], ENT_QUOTES, 'UTF-8') . "');"
+                        ? "background-image: linear-gradient(rgba(17,24,39,.14), rgba(17,24,39,.18)), url('" . htmlspecialchars($img, ENT_QUOTES, 'UTF-8') . "');"
                         : 'background: #e5e7eb;';
                 ?>
                 <article class="post-card">

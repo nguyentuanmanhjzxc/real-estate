@@ -59,6 +59,30 @@ function require_admin(): void
     ];
 }
 
+
+function admin_table_has_column(mysqli $conn, string $table, string $column): bool
+{
+    static $cache = [];
+    $key = $table . '.' . $column;
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+
+    $stmt = $conn->prepare(
+        'SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1'
+    );
+    if (!$stmt) {
+        $cache[$key] = false;
+        return false;
+    }
+    $stmt->bind_param('ss', $table, $column);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $cache[$key] = $result && $result->num_rows > 0;
+    $stmt->close();
+    return $cache[$key];
+}
+
 function get_single_value(mysqli $conn, string $sql)
 {
     $result = mysqli_query($conn, $sql);

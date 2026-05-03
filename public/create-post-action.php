@@ -1,55 +1,75 @@
 <?php
 session_start();
-include(__DIR__ . '/../config/database.php');
+require_once(__DIR__ . '/../config/database.php');
+require_once(__DIR__ . '/../includes/post-helpers.php');
 
-// Check if user is logged in
 if (empty($_SESSION['user'])) {
     $_SESSION['error'] = 'Vui lòng đăng nhập để đăng tin.';
     header('Location: index.php?open_login=1');
     exit();
 }
 
-$userId = (int)($_SESSION['user']['id'] ?? 0);
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: post-create.php');
     exit();
 }
 
-// Get and sanitize input data
+$userId = (int)($_SESSION['user']['id'] ?? 0);
+if ($userId <= 0) {
+    $_SESSION['error'] = 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.';
+    header('Location: index.php?open_login=1');
+    exit();
+}
+
 $title = trim($_POST['title'] ?? '');
 $price = (float)($_POST['price'] ?? 0);
 $area = (float)($_POST['area'] ?? 0);
-$bedroom = (int)($_POST['bedroom'] ?? 0);
-$bathroom = (int)($_POST['bathroom'] ?? 0);
-$type = trim($_POST['type'] ?? 'Chuyển nhượng');
-$furniture = trim($_POST['furniture'] ?? 'Cơ bản');
+$bedroomValue = normalize_room_number($_POST['bedroom'] ?? '');
+$bathroomValue = normalize_room_number($_POST['bathroom'] ?? '');
+$typeValue = normalize_post_type(trim($_POST['type'] ?? ''));
+$furnitureValue = normalize_furniture_value(trim($_POST['furniture'] ?? 'Nội thất cơ bản'));
+$floorRangeValue = normalize_floor_range(trim($_POST['floor'] ?? ''));
+$slug = unique_post_slug($conn, $title);
 $description = trim($_POST['description'] ?? '');
-$content = trim($_POST['content'] ?? '');
-$project_id = (int)($_POST['project_id'] ?? 0);
-$contact_name = trim($_POST['contact_name'] ?? $_SESSION['user']['name'] ?? '');
-$contact_phone = trim($_POST['contact_phone'] ?? '');
-$contact_email = trim($_POST['contact_email'] ?? '');
+$location = trim($_POST['location'] ?? '');
+$projectId = (int)($_POST['project_id'] ?? 0);
+$contactName = trim($_POST['contact_name'] ?? ($_SESSION['user']['name'] ?? ''));
+$contactPhone = trim($_POST['contact_phone'] ?? '');
+$contactEmail = trim($_POST['contact_email'] ?? '');
 $direction = trim($_POST['direction'] ?? '');
 $floor = trim($_POST['floor'] ?? '');
+$package = trim($_POST['package'] ?? 'normal');
+$priceUnit = trim($_POST['price_unit'] ?? ($typeValue === 'Cho thuê' ? 'monthly' : 'total'));
+$deposit = trim($_POST['deposit'] ?? '');
+$managementFee = trim($_POST['management_fee'] ?? '');
+$contactMethod = trim($_POST['contact_method'] ?? 'call');
 
-// Validation
 $errors = [];
-
-if (empty($title)) {
+if ($title === '') {
     $errors[] = 'Vui lòng nhập tiêu đề tin đăng.';
 }
-
 if ($price <= 0) {
-    $errors[] = 'Vui lòng nhập giá.';
+    $errors[] = 'Vui lòng nhập giá lớn hơn 0.';
 }
-
 if ($area <= 0) {
-    $errors[] = 'Vui lòng nhập diện tích.';
+    $errors[] = 'Vui lòng nhập diện tích lớn hơn 0.';
 }
-
-if (empty($contact_phone)) {
+if ($bedroomValue <= 0) {
+    $errors[] = 'Vui lòng chọn số phòng ngủ.';
+}
+if ($bathroomValue <= 0) {
+    $errors[] = 'Vui lòng chọn số phòng tắm.';
+}
+if ($contactName === '') {
+    $errors[] = 'Vui lòng nhập tên người liên hệ.';
+}
+if ($contactPhone === '') {
     $errors[] = 'Vui lòng nhập số điện thoại liên hệ.';
+} elseif (!preg_match('/^[0-9+\-\s\.]{8,20}$/', $contactPhone)) {
+    $errors[] = 'Số điện thoại liên hệ không hợp lệ.';
+}
+if ($contactEmail !== '' && !filter_var($contactEmail, FILTER_VALIDATE_EMAIL)) {
+    $errors[] = 'Email liên hệ không hợp lệ.';
 }
 
 if (!empty($errors)) {
@@ -58,117 +78,118 @@ if (!empty($errors)) {
     exit();
 }
 
-// Map type from form to database value
-$typeMap = [
-    'Chuyển nhượng căn hộ' => 'Chuyển nhượng',
-    'Cho thuê căn hộ' => 'Cho thuê',
-    'Chuyển nhượng' => 'Chuyển nhượng',
-    'Cho thuê' => 'Cho thuê',
-];
-$typeValue = $typeMap[$type] ?? 'Chuyển nhượng';
+$projectId = resolve_post_project_id($conn, $projectId, $location, $title);
+$content = build_optional_post_content([
+    'package' => $package,
+    'price_unit' => $priceUnit,
+    'deposit' => $deposit,
+    'management_fee' => $managementFee,
+    'contact_method' => $contactMethod,
+]);
 
-// Map bedroom value
-$bedroomMap = [
-    '1 phòng ngủ' => 1,
-    '2 phòng ngủ' => 2,
-    '3 phòng ngủ' => 3,
-    '4+ phòng ngủ' => 4,
-];
-$bedroomValue = isset($bedroomMap[$bedroom]) ? $bedroomMap[$bedroom] : (int)$bedroom;
+// Database của mỗi máy có thể thiếu vài cột như content, direction, floor...
+// Vì vậy đoạn dưới chỉ INSERT những cột thật sự tồn tại trong bảng post.
+if (!post_table_has_column($conn, 'post', 'content') && $content !== '') {
+    $description = trim($description . "\n\n" . $content);
+}
 
-// Map bathroom value
-$bathroomMap = [
-    '1 phòng tắm' => 1,
-    '2 phòng tắm' => 2,
-    '3 phòng tắm' => 3,
-];
-$bathroomValue = isset($bathroomMap[$bathroom]) ? $bathroomMap[$bathroom] : (int)$bathroom;
+$columns = [];
+$placeholders = [];
+$types = '';
+$values = [];
 
-// Map furniture value
-$furnitureMap = [
-    'Full nội thất' => 'Full nội thất',
-    'Nội thất cơ bản' => 'Nội thất cơ bản',
-    'Nhà trống' => 'Nhà trống',
-];
-$furnitureValue = $furnitureMap[$furniture] ?? 'Cơ bản';
-
-// Escape values for database
-$title = mysqli_real_escape_string($conn, $title);
-$description = mysqli_real_escape_string($conn, $description);
-$content = mysqli_real_escape_string($conn, $content);
-$contact_name = mysqli_real_escape_string($conn, $contact_name);
-$contact_phone = mysqli_real_escape_string($conn, $contact_phone);
-$contact_email = mysqli_real_escape_string($conn, $contact_email);
-$direction = mysqli_real_escape_string($conn, $direction);
-$floor = mysqli_real_escape_string($conn, $floor);
-$typeValue = mysqli_real_escape_string($conn, $typeValue);
-$furnitureValue = mysqli_real_escape_string($conn, $furnitureValue);
-
-// Insert into database
-$sql = "INSERT INTO post (
-    user_id, title, price, area, bedroom, bathroom, type, furniture, 
-    description, content, project_id, contact_name, contact_phone, contact_email,
-    direction, floor, status, created_at, updated_at
-) VALUES (
-    {$userId}, '{$title}', {$price}, {$area}, {$bedroomValue}, {$bathroomValue}, 
-    '{$typeValue}', '{$furnitureValue}', '{$description}', '{$content}', 
-    {$project_id}, '{$contact_name}', '{$contact_phone}', '{$contact_email}',
-    '{$direction}', '{$floor}', 1, NOW(), NOW()
-)";
-
-if (mysqli_query($conn, $sql)) {
-    $postId = mysqli_insert_id($conn);
-    
-    // Handle image upload
-    if (!empty($_FILES['apartment_images']['name'][0])) {
-        $uploadDir = __DIR__ . '/../uploads/';
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-        $maxFileSize = 5 * 1024 * 1024; // 5MB
-        
-        $imageNames = [];
-        $totalFiles = count($_FILES['apartment_images']['name']);
-        
-        for ($i = 0; $i < $totalFiles; $i++) {
-            if ($_FILES['apartment_images']['error'][$i] === 0) {
-                $tmpName = $_FILES['apartment_images']['tmp_name'][$i];
-                $originalName = $_FILES['apartment_images']['name'][$i];
-                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-                
-                // Validate file type
-                if (!in_array($extension, $allowedExtensions)) {
-                    continue;
-                }
-                
-                // Validate file size
-                if ($_FILES['apartment_images']['size'][$i] > $maxFileSize) {
-                    continue;
-                }
-                
-                // Generate unique filename
-                $newName = 'post_' . $postId . '_' . time() . '_' . $i . '.' . $extension;
-                
-                if (move_uploaded_file($tmpName, $uploadDir . $newName)) {
-                    $imageNames[] = $newName;
-                }
-            }
-        }
-        
-        // Insert image records
-        if (!empty($imageNames)) {
-            foreach ($imageNames as $index => $imageName) {
-                $isThumb = $index === 0 ? 1 : 0;
-                $imageName = mysqli_real_escape_string($conn, $imageName);
-                mysqli_query($conn, "INSERT INTO images (post_id, image_url, is_thumbnail) VALUES ({$postId}, '{$imageName}', {$isThumb})");
-            }
-        }
+$insertField = function (string $column, $value, string $type) use ($conn, &$columns, &$placeholders, &$types, &$values): void {
+    if (post_table_has_column($conn, 'post', $column)) {
+        $columns[] = $column;
+        $placeholders[] = '?';
+        $types .= $type;
+        $values[] = $value;
     }
-    
-    $_SESSION['success'] = 'Đăng tin thành công! Tin đăng của bạn đang được hiển thị.';
-    header('Location: my-posts.php');
-    exit();
-} else {
-    $_SESSION['error'] = 'Có lỗi xảy ra khi đăng tin: ' . mysqli_error($conn);
+};
+
+$insertRaw = function (string $column, string $rawSql) use ($conn, &$columns, &$placeholders): void {
+    if (post_table_has_column($conn, 'post', $column)) {
+        $columns[] = $column;
+        $placeholders[] = $rawSql;
+    }
+};
+
+$insertField('user_id', $userId, 'i');
+$insertField('title', $title, 's');
+$insertField('slug', $slug, 's');
+$insertField('price', $price, 'd');
+$insertField('area', $area, 'd');
+$insertField('bedroom', $bedroomValue, 'i');
+$insertField('bathroom', $bathroomValue, 'i');
+$insertField('floor_range', $floorRangeValue, 's');
+$insertField('type', $typeValue, 's');
+$insertField('furniture', $furnitureValue, 's');
+$insertField('description', $description, 's');
+$insertField('content', $content, 's');
+if ($projectId > 0) {
+    $insertField('project_id', $projectId, 'i');
+}
+$insertField('contact_name', $contactName, 's');
+$insertField('contact_phone', $contactPhone, 's');
+$insertField('contact_email', $contactEmail, 's');
+$insertField('direction', $direction, 's');
+$insertField('floor', $floor, 's');
+$insertField('package', $package, 's');
+$insertField('price_unit', $priceUnit, 's');
+$insertField('deposit', $deposit, 's');
+$insertField('management_fee', $managementFee, 's');
+$insertField('contact_method', $contactMethod, 's');
+$insertField('location', $location, 's');
+
+if (post_table_has_column($conn, 'post', 'is_vip')) {
+    $insertField('is_vip', in_array($package, ['featured', 'premium'], true) ? 1 : 0, 'i');
+}
+if (post_table_has_column($conn, 'post', 'status')) {
+    $columns[] = 'status';
+    $placeholders[] = '1';
+}
+$insertRaw('created_at', 'NOW()');
+$insertRaw('updated_at', 'NOW()');
+
+if (empty($columns)) {
+    $_SESSION['error'] = 'Không tìm thấy cột phù hợp trong bảng post. Vui lòng kiểm tra lại database.';
     header('Location: post-create.php');
     exit();
 }
-?>
+
+$sql = 'INSERT INTO post (`' . implode('`, `', $columns) . '`) VALUES (' . implode(', ', $placeholders) . ')';
+$stmt = $conn->prepare($sql);
+
+if (!$stmt) {
+    $_SESSION['error'] = 'Không thể chuẩn bị dữ liệu đăng tin: ' . $conn->error;
+    header('Location: post-create.php');
+    exit();
+}
+
+stmt_bind_params($stmt, $types, $values);
+
+if (!$stmt->execute()) {
+    $_SESSION['error'] = 'Có lỗi xảy ra khi đăng tin: ' . $stmt->error;
+    $stmt->close();
+    header('Location: post-create.php');
+    exit();
+}
+
+$postId = (int)$stmt->insert_id;
+$stmt->close();
+
+$uploadResult = upload_post_images($conn, $postId, 'apartment_images', true);
+ensure_post_thumbnail($conn, $postId);
+
+if ($uploadResult['saved'] === 0) {
+    $_SESSION['success'] = 'Đăng tin thành công. Bạn chưa tải ảnh, hệ thống sẽ hiển thị ảnh mặc định cho tin này.';
+} else {
+    $_SESSION['success'] = 'Đăng tin thành công! Đã tải lên ' . $uploadResult['saved'] . ' ảnh cho tin đăng.';
+}
+
+if (!empty($uploadResult['errors'])) {
+    $_SESSION['success'] .= '<br>Lưu ý: ' . implode('<br>', $uploadResult['errors']);
+}
+
+header('Location: my-posts.php');
+exit();

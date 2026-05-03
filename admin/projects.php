@@ -6,6 +6,7 @@ $pageTitle = 'Quản lý dự án';
 $activeMenu = 'projects';
 $pageHeading = 'Quản lý dự án / khu vực';
 $pageDescription = 'Thêm, sửa, xóa các dự án bất động sản trên hệ thống.';
+$projectAddressColumn = admin_table_has_column($conn, 'projects', 'address_detail') ? 'address_detail' : (admin_table_has_column($conn, 'projects', 'address') ? 'address' : '');
 
 // Get success/error messages
 $adminSuccess = $_SESSION['admin_success'] ?? '';
@@ -23,15 +24,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $address = mysqli_real_escape_string($conn, $_POST['address'] ?? '');
         
         if (!empty($name)) {
-            $stmt = $conn->prepare("INSERT INTO projects (name, district, province, address) VALUES (?, ?, ?, ?)");
-            if ($stmt) {
-                $stmt->bind_param("ssss", $name, $district, $province, $address);
-                if ($stmt->execute()) {
-                    $_SESSION['admin_success'] = 'Đã thêm dự án thành công.';
-                } else {
-                    $_SESSION['admin_error'] = 'Có lỗi xảy ra khi thêm dự án.';
+            if ($projectAddressColumn !== '') {
+                $stmt = $conn->prepare("INSERT INTO projects (name, district, province, `{$projectAddressColumn}`) VALUES (?, ?, ?, ?)");
+                if ($stmt) {
+                    $stmt->bind_param("ssss", $name, $district, $province, $address);
+                    if ($stmt->execute()) {
+                        $_SESSION['admin_success'] = 'Đã thêm dự án thành công.';
+                    } else {
+                        $_SESSION['admin_error'] = 'Có lỗi xảy ra khi thêm dự án.';
+                    }
+                    $stmt->close();
                 }
-                $stmt->close();
+            } else {
+                $stmt = $conn->prepare("INSERT INTO projects (name, district, province) VALUES (?, ?, ?)");
+                if ($stmt) {
+                    $stmt->bind_param("sss", $name, $district, $province);
+                    if ($stmt->execute()) {
+                        $_SESSION['admin_success'] = 'Đã thêm dự án thành công.';
+                    } else {
+                        $_SESSION['admin_error'] = 'Có lỗi xảy ra khi thêm dự án.';
+                    }
+                    $stmt->close();
+                }
             }
         } else {
             $_SESSION['admin_error'] = 'Vui lòng nhập tên dự án.';
@@ -48,15 +62,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $address = mysqli_real_escape_string($conn, $_POST['edit_address'] ?? '');
         
         if ($id > 0 && !empty($name)) {
-            $stmt = $conn->prepare("UPDATE projects SET name = ?, district = ?, province = ?, address = ? WHERE id = ?");
-            if ($stmt) {
-                $stmt->bind_param("ssssi", $name, $district, $province, $address, $id);
-                if ($stmt->execute()) {
-                    $_SESSION['admin_success'] = 'Đã cập nhật dự án thành công.';
-                } else {
-                    $_SESSION['admin_error'] = 'Có lỗi xảy ra khi cập nhật dự án.';
+            if ($projectAddressColumn !== '') {
+                $stmt = $conn->prepare("UPDATE projects SET name = ?, district = ?, province = ?, `{$projectAddressColumn}` = ? WHERE id = ?");
+                if ($stmt) {
+                    $stmt->bind_param("ssssi", $name, $district, $province, $address, $id);
+                    if ($stmt->execute()) {
+                        $_SESSION['admin_success'] = 'Đã cập nhật dự án thành công.';
+                    } else {
+                        $_SESSION['admin_error'] = 'Có lỗi xảy ra khi cập nhật dự án.';
+                    }
+                    $stmt->close();
                 }
-                $stmt->close();
+            } else {
+                $stmt = $conn->prepare("UPDATE projects SET name = ?, district = ?, province = ? WHERE id = ?");
+                if ($stmt) {
+                    $stmt->bind_param("sssi", $name, $district, $province, $id);
+                    if ($stmt->execute()) {
+                        $_SESSION['admin_success'] = 'Đã cập nhật dự án thành công.';
+                    } else {
+                        $_SESSION['admin_error'] = 'Có lỗi xảy ra khi cập nhật dự án.';
+                    }
+                    $stmt->close();
+                }
             }
         } else {
             $_SESSION['admin_error'] = 'Vui lòng nhập đầy đủ thông tin.';
@@ -136,7 +163,7 @@ function adminAlert($type, $message) {
         </div>
         <div class="field">
             <label>Địa chỉ chi tiết</label>
-            <input type="text" name="edit_address" value="<?php echo h($editProject['address'] ?? ''); ?>">
+            <input type="text" name="edit_address" value="<?php echo h($projectAddressColumn !== '' ? ($editProject[$projectAddressColumn] ?? '') : ''); ?>">
         </div>
         <button type="submit" name="action" value="edit" class="dark-btn" style="height: 40px; padding: 0 20px;">Cập nhật</button>
     </form>
